@@ -1,128 +1,27 @@
--- =============================================
--- OPTIMIZACIONES PARA AVILA'S TYRE COMPANY
--- Adaptado al schema existente - Bolivia/Santa Cruz
--- =============================================
-
 USE [Avila's Tyre Company];
 GO
 
-PRINT 'Iniciando optimizaciones del sistema...';
+PRINT '================================================';
+PRINT 'STORED PROCEDURES ORGANIZADOS';
+PRINT 'Avila''s Tyre Company - Santa Cruz, Bolivia';
+PRINT '================================================';
 GO
 
 -- =============================================
--- SECCIÓN 1: ÍNDICES OPTIMIZADOS
+-- CATEGORÍA 1: GESTIÓN DE CLIENTES
 -- =============================================
 
--- Índices para Usuarios y Autenticación
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Usuarios_Email')
-    CREATE UNIQUE INDEX IDX_Usuarios_Email ON Usuarios(Email) WHERE Activo = 1;
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Usuarios_Rol')
-    CREATE INDEX IDX_Usuarios_Rol ON Usuarios(RolID) INCLUDE (Email, Activo);
-
--- Índices para Clientes
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Clientes_Usuario')
-    CREATE INDEX IDX_Clientes_Usuario ON Clientes(UsuarioID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Clientes_Documento')
-    CREATE UNIQUE INDEX IDX_Clientes_Documento ON Clientes(NumeroDocumento);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Clientes_TipoCliente')
-    CREATE INDEX IDX_Clientes_TipoCliente ON Clientes(TipoCliente);
-
--- Índices para Direcciones (máximo 3 por cliente)
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Direcciones_Cliente')
-    CREATE INDEX IDX_Direcciones_Cliente ON Direcciones(ClienteID) WHERE Activo = 1;
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Direcciones_Principal')
-    CREATE INDEX IDX_Direcciones_Principal ON Direcciones(ClienteID, EsPrincipal) WHERE EsPrincipal = 1 AND Activo = 1;
-
--- Índices para Productos
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Productos_Codigo')
-    CREATE UNIQUE INDEX IDX_Productos_Codigo ON Productos(CodigoProducto);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Productos_Categoria')
-    CREATE INDEX IDX_Productos_Categoria ON Productos(CategoriaID) WHERE Activo = 1;
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Productos_Marca')
-    CREATE INDEX IDX_Productos_Marca ON Productos(MarcaID) WHERE Activo = 1;
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Productos_StockBajo')
-    CREATE INDEX IDX_Productos_StockBajo ON Productos(StockActual) WHERE StockActual <= StockMinimo AND Activo = 1;
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Productos_Destacados')
-    CREATE INDEX IDX_Productos_Destacados ON Productos(Destacado) WHERE Destacado = 1 AND Activo = 1;
-
--- Índices para Compatibilidad de Vehículos
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Compatibilidad_Producto')
-    CREATE INDEX IDX_Compatibilidad_Producto ON Llantas_Compatibilidad(ProductoID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Compatibilidad_Version')
-    CREATE INDEX IDX_Compatibilidad_Version ON Llantas_Compatibilidad(VersionVehiculoID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Compatibilidad_Compuesto')
-    CREATE INDEX IDX_Compatibilidad_Compuesto ON Llantas_Compatibilidad(ProductoID, VersionVehiculoID);
-
--- Índices para Modelos y Versiones de Vehículos
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Modelos_Marca')
-    CREATE INDEX IDX_Modelos_Marca ON Vehiculo_Modelos(MarcaVehiculoID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Versiones_Modelo')
-    CREATE INDEX IDX_Versiones_Modelo ON Vehiculo_Versiones(ModeloVehiculoID);
-
--- Índices para Ventas
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Ventas_Cliente')
-    CREATE INDEX IDX_Ventas_Cliente ON Ventas(ClienteID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Ventas_Fecha')
-    CREATE INDEX IDX_Ventas_Fecha ON Ventas(FechaVenta DESC);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Ventas_Estado')
-    CREATE INDEX IDX_Ventas_Estado ON Ventas(EstadoID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Ventas_NumeroFactura')
-    CREATE UNIQUE INDEX IDX_Ventas_NumeroFactura ON Ventas(NumeroFactura);
-
--- Índices para DetalleVentas
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_DetalleVentas_Venta')
-    CREATE INDEX IDX_DetalleVentas_Venta ON DetalleVentas(VentaID);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_DetalleVentas_Producto')
-    CREATE INDEX IDX_DetalleVentas_Producto ON DetalleVentas(ProductoID);
-
--- Índices para Promociones
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Promociones_Fechas')
-    CREATE INDEX IDX_Promociones_Fechas ON Promociones(FechaInicio, FechaFin) WHERE Activa = 1;
-
--- Índices para Cupones
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Cupones_Codigo')
-    CREATE UNIQUE INDEX IDX_Cupones_Codigo ON Cupones(CodigoCupon);
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_Cupones_Activos')
-    CREATE INDEX IDX_Cupones_Activos ON Cupones(Activo) WHERE Activo = 1;
-
-PRINT '✓ Índices creados exitosamente';
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearClientePersona')
+    DROP PROCEDURE sp_CrearClientePersona;
 GO
 
--- =============================================
--- SECCIÓN 2: STORED PROCEDURES
--- =============================================
-
-PRINT 'Creando stored procedures...';
-GO
-
--- SP: Registrar Usuario Persona (Santa Cruz)
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_RegistrarUsuarioPersona')
-    DROP PROCEDURE sp_RegistrarUsuarioPersona;
-GO
-
-CREATE PROCEDURE sp_RegistrarUsuarioPersona
+CREATE PROCEDURE sp_CrearClientePersona
     @Email NVARCHAR(100),
     @PasswordHash NVARCHAR(255),
     @Nombres NVARCHAR(100),
     @ApellidoPaterno NVARCHAR(100),
     @ApellidoMaterno NVARCHAR(100) = NULL,
-    @NumeroCI NVARCHAR(20),
+    @CI NVARCHAR(20),
     @Telefono NVARCHAR(20) = NULL,
     @FechaNacimiento DATE = NULL
 AS
@@ -130,67 +29,85 @@ BEGIN
     SET NOCOUNT ON;
     SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
-    BEGIN TRY
-        BEGIN TRANSACTION;
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
         
-        DECLARE @UsuarioID INT;
-        DECLARE @ClienteID INT;
-        DECLARE @RolClienteID INT;
-        
-        -- Verificar si el email ya existe
-        IF EXISTS (SELECT 1 FROM Usuarios WHERE Email = @Email AND Activo = 1)
-        BEGIN
-            THROW 50001, 'El email ya está registrado', 1;
-        END
-        
-        -- Verificar si el CI ya existe
-        IF EXISTS (SELECT 1 FROM Clientes WHERE NumeroDocumento = @NumeroCI)
-        BEGIN
-            THROW 50002, 'El número de documento ya está registrado', 1;
-        END
-        
-        -- Obtener el RolID de "Cliente" (asumiendo que existe)
-        SELECT @RolClienteID = RolID FROM Roles WHERE NombreRol = 'Cliente';
-        
-        IF @RolClienteID IS NULL
-        BEGIN
-            THROW 50003, 'Rol de Cliente no encontrado en el sistema', 1;
-        END
-        
-        -- Insertar Usuario
-        INSERT INTO Usuarios (Email, PasswordHash, RolID, Activo)
-        VALUES (@Email, @PasswordHash, @RolClienteID, 1);
-        
-        SET @UsuarioID = SCOPE_IDENTITY();
-        
-        -- Insertar Cliente
-        INSERT INTO Clientes (UsuarioID, NumeroDocumento, TipoDocumento, TipoCliente, Telefono)
-        VALUES (@UsuarioID, @NumeroCI, 'CI', 'Persona', @Telefono);
-        
-        SET @ClienteID = SCOPE_IDENTITY();
-        
-        -- Insertar Persona
-        INSERT INTO Personas (ClienteID, Nombres, ApellidoPaterno, ApellidoMaterno, FechaNacimiento)
-        VALUES (@ClienteID, @Nombres, @ApellidoPaterno, @ApellidoMaterno, @FechaNacimiento);
-        
-        SELECT @UsuarioID AS UsuarioID, @ClienteID AS ClienteID;
-        
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @UsuarioID INT;
+            DECLARE @ClienteID INT;
+            DECLARE @RolClienteID INT;
+            
+            IF EXISTS (SELECT 1 FROM Usuarios WITH (UPDLOCK, HOLDLOCK) WHERE Email = @Email AND Activo = 1)
+            BEGIN
+                RAISERROR('El email ya está registrado en el sistema', 16, 1);
+            END
+            
+            IF EXISTS (SELECT 1 FROM Clientes WITH (UPDLOCK, HOLDLOCK) WHERE NumeroDocumento = @CI)
+            BEGIN
+                RAISERROR('El CI ya está registrado en el sistema', 16, 1);
+            END
+            
+            SELECT @RolClienteID = RolID FROM Roles WHERE NombreRol = 'Cliente';
+            
+            IF @RolClienteID IS NULL
+            BEGIN
+                RAISERROR('Error del sistema: Rol Cliente no encontrado', 16, 1);
+            END
+            
+            INSERT INTO Usuarios (Email, PasswordHash, RolID, Activo)
+            VALUES (@Email, @PasswordHash, @RolClienteID, 1);
+            
+            SET @UsuarioID = SCOPE_IDENTITY();
+            
+            INSERT INTO Clientes (UsuarioID, NumeroDocumento, TipoDocumento, TipoCliente, Telefono)
+            VALUES (@UsuarioID, @CI, 'CI', 'Persona', @Telefono);
+            
+            SET @ClienteID = SCOPE_IDENTITY();
+            
+            INSERT INTO Personas (ClienteID, Nombres, ApellidoPaterno, ApellidoMaterno, FechaNacimiento)
+            VALUES (@ClienteID, @Nombres, @ApellidoPaterno, @ApellidoMaterno, @FechaNacimiento);
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @UsuarioID AS UsuarioID, 
+                @ClienteID AS ClienteID,
+                'Cliente persona creado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205
+            BEGIN
+                IF @Reintentos < @MaxReintentos
+                BEGIN
+                    PRINT 'Deadlock detectado, reintento ' + CAST(@Reintentos AS NVARCHAR) + '...';
+                    WAITFOR DELAY '00:00:01';
+                    CONTINUE;
+                END
+            END;
+            
+            THROW;
+        END CATCH
+    END
 END
 GO
 
--- SP: Registrar Usuario Empresa
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_RegistrarUsuarioEmpresa')
-    DROP PROCEDURE sp_RegistrarUsuarioEmpresa;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearClienteEmpresa')
+    DROP PROCEDURE sp_CrearClienteEmpresa;
 GO
 
-CREATE PROCEDURE sp_RegistrarUsuarioEmpresa
+CREATE PROCEDURE sp_CrearClienteEmpresa
     @Email NVARCHAR(100),
     @PasswordHash NVARCHAR(255),
     @RazonSocial NVARCHAR(255),
@@ -202,106 +119,117 @@ BEGIN
     SET NOCOUNT ON;
     SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
-    BEGIN TRY
-        BEGIN TRANSACTION;
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
         
-        DECLARE @UsuarioID INT;
-        DECLARE @ClienteID INT;
-        DECLARE @RolClienteID INT;
-        
-        IF EXISTS (SELECT 1 FROM Usuarios WHERE Email = @Email AND Activo = 1)
-        BEGIN
-            THROW 50001, 'El email ya está registrado', 1;
-        END
-        
-        IF EXISTS (SELECT 1 FROM Clientes WHERE NumeroDocumento = @NIT)
-        BEGIN
-            THROW 50002, 'El NIT ya está registrado', 1;
-        END
-        
-        SELECT @RolClienteID = RolID FROM Roles WHERE NombreRol = 'Cliente';
-        
-        IF @RolClienteID IS NULL
-        BEGIN
-            THROW 50003, 'Rol de Cliente no encontrado en el sistema', 1;
-        END
-        
-        INSERT INTO Usuarios (Email, PasswordHash, RolID, Activo)
-        VALUES (@Email, @PasswordHash, @RolClienteID, 1);
-        
-        SET @UsuarioID = SCOPE_IDENTITY();
-        
-        INSERT INTO Clientes (UsuarioID, NumeroDocumento, TipoDocumento, TipoCliente, Telefono)
-        VALUES (@UsuarioID, @NIT, 'NIT', 'Empresa', @Telefono);
-        
-        SET @ClienteID = SCOPE_IDENTITY();
-        
-        INSERT INTO Empresas (ClienteID, RazonSocial, NombreComercial)
-        VALUES (@ClienteID, @RazonSocial, @NombreComercial);
-        
-        SELECT @UsuarioID AS UsuarioID, @ClienteID AS ClienteID;
-        
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @UsuarioID INT;
+            DECLARE @ClienteID INT;
+            DECLARE @RolClienteID INT;
+            
+            IF EXISTS (SELECT 1 FROM Usuarios WITH (UPDLOCK, HOLDLOCK) WHERE Email = @Email AND Activo = 1)
+            BEGIN
+                RAISERROR('El email ya está registrado', 16, 1);
+            END
+            
+            IF EXISTS (SELECT 1 FROM Clientes WITH (UPDLOCK, HOLDLOCK) WHERE NumeroDocumento = @NIT)
+            BEGIN
+                RAISERROR('El NIT ya está registrado', 16, 1);
+            END
+            
+            SELECT @RolClienteID = RolID FROM Roles WHERE NombreRol = 'Cliente';
+            
+            IF @RolClienteID IS NULL
+                RAISERROR('Error del sistema: Rol Cliente no encontrado', 16, 1);
+            
+            INSERT INTO Usuarios (Email, PasswordHash, RolID, Activo)
+            VALUES (@Email, @PasswordHash, @RolClienteID, 1);
+            
+            SET @UsuarioID = SCOPE_IDENTITY();
+            
+            INSERT INTO Clientes (UsuarioID, NumeroDocumento, TipoDocumento, TipoCliente, Telefono)
+            VALUES (@UsuarioID, @NIT, 'NIT', 'Empresa', @Telefono);
+            
+            SET @ClienteID = SCOPE_IDENTITY();
+            
+            INSERT INTO Empresas (ClienteID, RazonSocial, NombreComercial)
+            VALUES (@ClienteID, @RazonSocial, @NombreComercial);
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @UsuarioID AS UsuarioID, @ClienteID AS ClienteID, 'Cliente empresa creado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
 END
 GO
 
--- SP: Agregar Dirección (Máximo 3 por cliente - Santa Cruz)
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_AgregarDireccion')
-    DROP PROCEDURE sp_AgregarDireccion;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ActualizarClientePersona')
+    DROP PROCEDURE sp_ActualizarClientePersona;
 GO
 
-CREATE PROCEDURE sp_AgregarDireccion
+CREATE PROCEDURE sp_ActualizarClientePersona
     @ClienteID INT,
-    @NombreDireccion NVARCHAR(50),
-    @Calle NVARCHAR(255),
-    @Zona NVARCHAR(100),
-    @CiudadID INT,
-    @Referencia NVARCHAR(255) = NULL,
-    @EsPrincipal BIT = 0
+    @Nombres NVARCHAR(100) = NULL,
+    @ApellidoPaterno NVARCHAR(100) = NULL,
+    @ApellidoMaterno NVARCHAR(100) = NULL,
+    @Telefono NVARCHAR(20) = NULL,
+    @FechaNacimiento DATE = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
     BEGIN TRY
         BEGIN TRANSACTION;
         
-        DECLARE @CantidadDirecciones INT;
-        
-        -- Verificar máximo de 3 direcciones
-        SELECT @CantidadDirecciones = COUNT(*) 
-        FROM Direcciones 
-        WHERE ClienteID = @ClienteID AND Activo = 1;
-        
-        IF @CantidadDirecciones >= 3
+        IF NOT EXISTS (
+            SELECT 1 FROM Clientes WITH (UPDLOCK, HOLDLOCK)
+            WHERE ClienteID = @ClienteID AND TipoCliente = 'Persona'
+        )
         BEGIN
-            THROW 50004, 'El cliente ya tiene el máximo de 3 direcciones registradas', 1;
+            RAISERROR('Cliente no encontrado o no es tipo Persona', 16, 1);
         END
         
-        -- Si es principal, desmarcar las demás
-        IF @EsPrincipal = 1
+        IF @Telefono IS NOT NULL
         BEGIN
-            UPDATE Direcciones 
-            SET EsPrincipal = 0 
-            WHERE ClienteID = @ClienteID AND Activo = 1;
+            UPDATE Clientes 
+            SET Telefono = @Telefono
+            WHERE ClienteID = @ClienteID;
         END
         
-        -- Si es la primera dirección, hacerla principal automáticamente
-        IF @CantidadDirecciones = 0
-        BEGIN
-            SET @EsPrincipal = 1;
-        END
-        
-        INSERT INTO Direcciones (ClienteID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal, Activo)
-        VALUES (@ClienteID, @NombreDireccion, @Calle, @Zona, @CiudadID, @Referencia, @EsPrincipal, 1);
-        
-        SELECT SCOPE_IDENTITY() AS DireccionID;
+        UPDATE Personas
+        SET 
+            Nombres = COALESCE(@Nombres, Nombres),
+            ApellidoPaterno = COALESCE(@ApellidoPaterno, ApellidoPaterno),
+            ApellidoMaterno = COALESCE(@ApellidoMaterno, ApellidoMaterno),
+            FechaNacimiento = COALESCE(@FechaNacimiento, FechaNacimiento)
+        WHERE ClienteID = @ClienteID;
         
         COMMIT TRANSACTION;
+        
+        SELECT @ClienteID AS ClienteID, 'Datos actualizados exitosamente' AS Mensaje;
+        
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -311,7 +239,410 @@ BEGIN
 END
 GO
 
--- SP: Crear Venta Completa con Control de Stock
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ActualizarClienteEmpresa')
+    DROP PROCEDURE sp_ActualizarClienteEmpresa;
+GO
+
+CREATE PROCEDURE sp_ActualizarClienteEmpresa
+    @ClienteID INT,
+    @RazonSocial NVARCHAR(255) = NULL,
+    @NombreComercial NVARCHAR(255) = NULL,
+    @Telefono NVARCHAR(20) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM Clientes WITH (UPDLOCK, HOLDLOCK)
+            WHERE ClienteID = @ClienteID AND TipoCliente = 'Empresa'
+        )
+        BEGIN
+            RAISERROR('Cliente no encontrado o no es tipo Empresa', 16, 1);
+        END
+        
+        IF @Telefono IS NOT NULL
+        BEGIN
+            UPDATE Clientes 
+            SET Telefono = @Telefono
+            WHERE ClienteID = @ClienteID;
+        END
+        
+        UPDATE Empresas
+        SET 
+            RazonSocial = COALESCE(@RazonSocial, RazonSocial),
+            NombreComercial = COALESCE(@NombreComercial, NombreComercial)
+        WHERE ClienteID = @ClienteID;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT @ClienteID AS ClienteID, 'Datos de empresa actualizados exitosamente' AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+PRINT '✓ Gestión de Clientes: 4 SPs creados';
+GO
+
+-- =============================================
+-- CATEGORÍA 2: GESTIÓN DE PRODUCTOS
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearProducto')
+    DROP PROCEDURE sp_CrearProducto;
+GO
+
+CREATE PROCEDURE sp_CrearProducto
+    @CodigoProducto NVARCHAR(50),
+    @NombreProducto NVARCHAR(255),
+    @Descripcion NVARCHAR(MAX) = NULL,
+    @CategoriaID INT,
+    @MarcaID INT,
+    @Ancho INT = NULL,
+    @Perfil INT = NULL,
+    @DiametroRin INT = NULL,
+    @IndiceCarga NVARCHAR(10) = NULL,
+    @IndiceVelocidad NVARCHAR(10) = NULL,
+    @PrecioCompraBs DECIMAL(10,2),
+    @PrecioVentaBs DECIMAL(10,2),
+    @StockMinimo INT,
+    @StockActual INT,
+    @Destacado BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            IF EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE CodigoProducto = @CodigoProducto)
+            BEGIN
+                RAISERROR('El código de producto ya existe', 16, 1);
+            END
+            
+            IF NOT EXISTS (SELECT 1 FROM Categorias WHERE CategoriaID = @CategoriaID AND Activo = 1)
+            BEGIN
+                RAISERROR('Categoría no encontrada o inactiva', 16, 1);
+            END
+            
+            IF @MarcaID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Marcas WHERE MarcaID = @MarcaID AND Activo = 1)
+            BEGIN
+                RAISERROR('Marca no encontrada o inactiva', 16, 1);
+            END
+            
+            DECLARE @ProductoID INT;
+            
+            INSERT INTO Productos (
+                CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID,
+                Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad,
+                PrecioCompraBs, PrecioVentaBs, StockMinimo, StockActual, Activo, Destacado
+            )
+            VALUES (
+                @CodigoProducto, @NombreProducto, @Descripcion, @CategoriaID, @MarcaID,
+                @Ancho, @Perfil, @DiametroRin, @IndiceCarga, @IndiceVelocidad,
+                @PrecioCompraBs, @PrecioVentaBs, @StockMinimo, @StockActual, 1, @Destacado
+            );
+            
+            SET @ProductoID = SCOPE_IDENTITY();
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @ProductoID AS ProductoID, 'Producto creado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ActualizarProducto')
+    DROP PROCEDURE sp_ActualizarProducto;
+GO
+
+CREATE PROCEDURE sp_ActualizarProducto
+    @ProductoID INT,
+    @NombreProducto NVARCHAR(255) = NULL,
+    @Descripcion NVARCHAR(MAX) = NULL,
+    @PrecioCompraBs DECIMAL(10,2) = NULL,
+    @PrecioVentaBs DECIMAL(10,2) = NULL,
+    @StockMinimo INT = NULL,
+    @Destacado BIT = NULL,
+    @Activo BIT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE ProductoID = @ProductoID)
+        BEGIN
+            RAISERROR('Producto no encontrado', 16, 1);
+        END
+        
+        UPDATE Productos
+        SET 
+            NombreProducto = COALESCE(@NombreProducto, NombreProducto),
+            Descripcion = COALESCE(@Descripcion, Descripcion),
+            PrecioCompraBs = COALESCE(@PrecioCompraBs, PrecioCompraBs),
+            PrecioVentaBs = COALESCE(@PrecioVentaBs, PrecioVentaBs),
+            StockMinimo = COALESCE(@StockMinimo, StockMinimo),
+            Destacado = COALESCE(@Destacado, Destacado),
+            Activo = COALESCE(@Activo, Activo)
+        WHERE ProductoID = @ProductoID;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT @ProductoID AS ProductoID, 'Producto actualizado exitosamente' AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+PRINT '✓ Gestión de Productos: 2 SPs creados';
+GO
+
+-- =============================================
+-- CATEGORÍA 3: GESTIÓN DE COMPRAS
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearCompra')
+    DROP PROCEDURE sp_CrearCompra;
+GO
+
+CREATE PROCEDURE sp_CrearCompra
+    @ProveedorID INT,
+    @UsuarioID INT,
+    @DetallesJSON NVARCHAR(MAX),
+    @Observaciones NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @CompraID INT;
+            DECLARE @NumeroCompra NVARCHAR(50);
+            DECLARE @TotalCompraBs DECIMAL(12,2) = 0;
+            
+            DECLARE @NumeroSecuencial INT;
+            SELECT @NumeroSecuencial = ISNULL(MAX(CAST(SUBSTRING(NumeroCompra, 11, 10) AS INT)), 0) + 1
+            FROM Compras WITH (TABLOCKX, HOLDLOCK)
+            WHERE NumeroCompra LIKE 'COMP-' + FORMAT(GETDATE(), 'yyyy') + '%';
+            
+            SET @NumeroCompra = 'COMP-' + FORMAT(GETDATE(), 'yyyy') + '-' + FORMAT(@NumeroSecuencial, '000');
+            
+            CREATE TABLE #TempDetalles (
+                ProductoID INT,
+                Cantidad INT,
+                PrecioUnitarioBs DECIMAL(10,2),
+                SubtotalBs DECIMAL(12,2)
+            );
+            
+            INSERT INTO #TempDetalles (ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs)
+            SELECT 
+                ProductoID,
+                Cantidad,
+                PrecioUnitarioBs,
+                Cantidad * PrecioUnitarioBs
+            FROM OPENJSON(@DetallesJSON) WITH (
+                ProductoID INT,
+                Cantidad INT,
+                PrecioUnitarioBs DECIMAL(10,2)
+            );
+            
+            IF EXISTS (
+                SELECT 1 FROM #TempDetalles t
+                WHERE NOT EXISTS (SELECT 1 FROM Productos p WHERE p.ProductoID = t.ProductoID AND p.Activo = 1)
+            )
+            BEGIN
+                RAISERROR('Uno o más productos no existen o están inactivos', 16, 1);
+            END
+            
+            SELECT @TotalCompraBs = SUM(SubtotalBs) FROM #TempDetalles;
+            
+            INSERT INTO Compras (NumeroCompra, ProveedorID, UsuarioID, TotalCompraBs, EstadoCompraID, Observaciones)
+            VALUES (@NumeroCompra, @ProveedorID, @UsuarioID, @TotalCompraBs, 1, @Observaciones);
+            
+            SET @CompraID = SCOPE_IDENTITY();
+            
+            INSERT INTO DetalleCompras (CompraID, ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs)
+            SELECT @CompraID, ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs FROM #TempDetalles;
+            
+            INSERT INTO HistorialEstadoCompra (CompraID, EstadoID, UsuarioID, Comentario)
+            VALUES (@CompraID, 1, @UsuarioID, 'Compra solicitada al proveedor');
+            
+            DROP TABLE #TempDetalles;
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @CompraID AS CompraID, @NumeroCompra AS NumeroCompra, @TotalCompraBs AS TotalCompraBs;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF OBJECT_ID('tempdb..#TempDetalles') IS NOT NULL
+                DROP TABLE #TempDetalles;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CrearCompra, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CambiarEstadoCompra')
+    DROP PROCEDURE sp_CambiarEstadoCompra;
+GO
+
+CREATE PROCEDURE sp_CambiarEstadoCompra
+    @CompraID INT,
+    @NuevoEstadoID INT,
+    @UsuarioID INT,
+    @Comentario NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @EstadoActual INT;
+            
+            SELECT @EstadoActual = EstadoCompraID 
+            FROM Compras WITH (UPDLOCK, HOLDLOCK)
+            WHERE CompraID = @CompraID;
+            
+            IF @EstadoActual IS NULL
+                RAISERROR('Compra no encontrada', 16, 1);
+            
+            IF @EstadoActual = @NuevoEstadoID
+                RAISERROR('La compra ya está en ese estado', 16, 1);
+            
+            UPDATE Compras SET EstadoCompraID = @NuevoEstadoID WHERE CompraID = @CompraID;
+            
+            INSERT INTO HistorialEstadoCompra (CompraID, EstadoID, UsuarioID, Comentario)
+            VALUES (@CompraID, @NuevoEstadoID, @UsuarioID, @Comentario);
+            
+            IF @NuevoEstadoID = 4
+            BEGIN
+                UPDATE p
+                SET p.StockActual = p.StockActual + dc.Cantidad
+                FROM Productos p WITH (UPDLOCK, HOLDLOCK)
+                INNER JOIN DetalleCompras dc ON p.ProductoID = dc.ProductoID
+                WHERE dc.CompraID = @CompraID;
+                
+                INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones)
+                SELECT 
+                    dc.ProductoID,
+                    2,
+                    dc.Cantidad,
+                    p.StockActual - dc.Cantidad,
+                    p.StockActual,
+                    @UsuarioID,
+                    'Compras',
+                    @CompraID,
+                    'Compra recibida - ' + c.NumeroCompra
+                FROM DetalleCompras dc
+                INNER JOIN Productos p ON dc.ProductoID = p.ProductoID
+                INNER JOIN Compras c ON dc.CompraID = c.CompraID
+                WHERE dc.CompraID = @CompraID;
+            END
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @CompraID AS CompraID, @NuevoEstadoID AS EstadoID, 'Estado actualizado correctamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CambiarEstadoCompra, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+PRINT '✓ Gestión de Compras: 2 SPs creados';
+GO
+
+-- =============================================
+-- CATEGORÍA 4: GESTIÓN DE VENTAS
+-- =============================================
+
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearVenta')
     DROP PROCEDURE sp_CrearVenta;
 GO
@@ -322,491 +653,1244 @@ CREATE PROCEDURE sp_CrearVenta
     @MetodoPagoID INT,
     @CuponID INT = NULL,
     @Observaciones NVARCHAR(500) = NULL,
-    @DetallesJSON NVARCHAR(MAX), -- JSON: [{ProductoID, Cantidad}]
-    @UsuarioID INT -- Usuario que procesa la venta
+    @DetallesJSON NVARCHAR(MAX),
+    @UsuarioID INT
 AS
 BEGIN
     SET NOCOUNT ON;
     SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @VentaID INT;
+            DECLARE @NumeroFactura NVARCHAR(50);
+            DECLARE @SubtotalVentaBs DECIMAL(12,2) = 0;
+            DECLARE @DescuentoPromocionBs DECIMAL(12,2) = 0;
+            DECLARE @DescuentoCuponBs DECIMAL(12,2) = 0;
+            DECLARE @TotalVentaBs DECIMAL(12,2) = 0;
+            
+            DECLARE @NumeroSecuencial INT;
+            SELECT @NumeroSecuencial = ISNULL(MAX(CAST(SUBSTRING(NumeroFactura, 10, 10) AS INT)), 0) + 1
+            FROM Ventas WITH (TABLOCKX, HOLDLOCK)
+            WHERE NumeroFactura LIKE 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '%';
+            
+            SET @NumeroFactura = 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '-' + FORMAT(@NumeroSecuencial, '0000');
+            
+            CREATE TABLE #TempDetalles (
+                ProductoID INT,
+                Cantidad INT,
+                PrecioUnitarioBs DECIMAL(10,2),
+                DescuentoBs DECIMAL(10,2),
+                SubtotalBs DECIMAL(12,2)
+            );
+            
+            INSERT INTO #TempDetalles (ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
+            SELECT 
+                j.ProductoID,
+                j.Cantidad,
+                p.PrecioVentaBs,
+                0,
+                j.Cantidad * p.PrecioVentaBs
+            FROM OPENJSON(@DetallesJSON) WITH (ProductoID INT, Cantidad INT) AS j
+            INNER JOIN Productos p WITH (UPDLOCK, HOLDLOCK) ON p.ProductoID = j.ProductoID
+            WHERE p.Activo = 1;
+            
+            IF EXISTS (
+                SELECT 1 FROM #TempDetalles t
+                INNER JOIN Productos p WITH (UPDLOCK, HOLDLOCK) ON t.ProductoID = p.ProductoID
+                WHERE p.StockActual < t.Cantidad
+            )
+            BEGIN
+                DECLARE @ProductosSinStock NVARCHAR(MAX);
+                SELECT @ProductosSinStock = STRING_AGG(
+                    p.NombreProducto + ' (disponible: ' + CAST(p.StockActual AS NVARCHAR) + ', solicitado: ' + CAST(t.Cantidad AS NVARCHAR) + ')', 
+                    ', '
+                )
+                FROM #TempDetalles t
+                INNER JOIN Productos p ON t.ProductoID = p.ProductoID
+                WHERE p.StockActual < t.Cantidad;
+                
+                DECLARE @MensajeError NVARCHAR(500) = 'Stock insuficiente para: ' + @ProductosSinStock;
+                RAISERROR(@MensajeError, 16, 1);
+            END
+            
+            SELECT @SubtotalVentaBs = SUM(SubtotalBs) FROM #TempDetalles;
+            
+            IF @CuponID IS NOT NULL
+            BEGIN
+                DECLARE @TipoDescuento NVARCHAR(20), @ValorDescuento DECIMAL(10,2), @MontoMin DECIMAL(10,2);
+                DECLARE @UsosActuales INT, @UsosMaximos INT;
+                
+                SELECT 
+                    @TipoDescuento = TipoDescuento,
+                    @ValorDescuento = ValorDescuento,
+                    @MontoMin = MontoMinCompra,
+                    @UsosActuales = UsosActuales,
+                    @UsosMaximos = UsosMaximos
+                FROM Cupones WITH (UPDLOCK, HOLDLOCK)
+                WHERE CuponID = @CuponID AND Activo = 1;
+                
+                IF @UsosActuales >= @UsosMaximos
+                    RAISERROR('El cupón ha alcanzado el máximo de usos', 16, 1);
+                
+                IF @SubtotalVentaBs < @MontoMin
+                    RAISERROR('El monto de compra no alcanza el mínimo requerido para el cupón', 16, 1);
+                
+                IF @TipoDescuento = 'PORCENTAJE'
+                    SET @DescuentoCuponBs = @SubtotalVentaBs * (@ValorDescuento / 100);
+                ELSE IF @TipoDescuento = 'MONTO_FIJO'
+                    SET @DescuentoCuponBs = @ValorDescuento;
+            END
+            
+            SET @TotalVentaBs = @SubtotalVentaBs - @DescuentoPromocionBs - @DescuentoCuponBs;
+            
+            INSERT INTO Ventas (NumeroFactura, ClienteID, DireccionEnvioID, SubtotalVentaBs, DescuentoPromocionBs, DescuentoCuponBs, TotalVentaBs, MetodoPagoID, EstadoID, CuponID, Observaciones)
+            VALUES (@NumeroFactura, @ClienteID, @DireccionEnvioID, @SubtotalVentaBs, @DescuentoPromocionBs, @DescuentoCuponBs, @TotalVentaBs, @MetodoPagoID, 1, @CuponID, @Observaciones);
+            
+            SET @VentaID = SCOPE_IDENTITY();
+            
+            INSERT INTO DetalleVentas (VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
+            SELECT @VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs FROM #TempDetalles;
+            
+            UPDATE p
+            SET p.StockActual = p.StockActual - t.Cantidad
+            FROM Productos p
+            INNER JOIN #TempDetalles t ON p.ProductoID = t.ProductoID;
+            
+            INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones)
+            SELECT t.ProductoID, 1, t.Cantidad, p.StockActual + t.Cantidad, p.StockActual, @UsuarioID, 'Ventas', @VentaID, 'Venta - ' + @NumeroFactura
+            FROM #TempDetalles t
+            INNER JOIN Productos p ON t.ProductoID = p.ProductoID;
+            
+            INSERT INTO HistorialEstadoPedido (VentaID, EstadoID, UsuarioID, Comentario)
+            VALUES (@VentaID, 1, @UsuarioID, 'Venta creada');
+            
+            IF @CuponID IS NOT NULL
+                UPDATE Cupones SET UsosActuales = UsosActuales + 1 WHERE CuponID = @CuponID;
+            
+            DROP TABLE #TempDetalles;
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @VentaID AS VentaID, @NumeroFactura AS NumeroFactura, @TotalVentaBs AS TotalVentaBs, 'Venta creada exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF OBJECT_ID('tempdb..#TempDetalles') IS NOT NULL
+                DROP TABLE #TempDetalles;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CrearVenta, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CambiarEstadoVenta')
+    DROP PROCEDURE sp_CambiarEstadoVenta;
+GO
+
+CREATE PROCEDURE sp_CambiarEstadoVenta
+    @VentaID INT,
+    @NuevoEstadoID INT,
+    @UsuarioID INT,
+    @Comentario NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
     BEGIN TRY
         BEGIN TRANSACTION;
         
-        DECLARE @VentaID INT;
-        DECLARE @NumeroFactura NVARCHAR(50);
-        DECLARE @SubtotalVentaBs DECIMAL(12,2) = 0;
-        DECLARE @DescuentoPromocionBs DECIMAL(12,2) = 0;
-        DECLARE @DescuentoCuponBs DECIMAL(12,2) = 0;
-        DECLARE @TotalVentaBs DECIMAL(12,2) = 0;
-        DECLARE @EstadoPendienteID INT;
+        DECLARE @EstadoActual INT;
         
-        -- Generar número de factura único (formato boliviano)
-        DECLARE @NumeroSecuencial INT;
-        SELECT @NumeroSecuencial = ISNULL(MAX(CAST(SUBSTRING(NumeroFactura, 10, 10) AS INT)), 0) + 1
-        FROM Ventas
-        WHERE NumeroFactura LIKE 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '%';
+        SELECT @EstadoActual = EstadoID 
+        FROM Ventas WITH (UPDLOCK, HOLDLOCK)
+        WHERE VentaID = @VentaID;
         
-        SET @NumeroFactura = 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '-' + FORMAT(@NumeroSecuencial, '0000');
+        IF @EstadoActual IS NULL
+            RAISERROR('Venta no encontrada', 16, 1);
         
-        -- Obtener estado "Pendiente"
-        SELECT @EstadoPendienteID = EstadoID FROM EstadosPedido WHERE NombreEstado = 'Pendiente';
+        IF @EstadoActual = @NuevoEstadoID
+            RAISERROR('La venta ya está en ese estado', 16, 1);
         
-        -- Crear tabla temporal para detalles
-        CREATE TABLE #TempDetalles (
-            ProductoID INT,
-            Cantidad INT,
-            PrecioUnitarioBs DECIMAL(10,2),
-            DescuentoBs DECIMAL(10,2),
-            SubtotalBs DECIMAL(12,2)
-        );
+        IF @EstadoActual IN (5, 6)
+            RAISERROR('No se puede cambiar el estado de una venta entregada o cancelada', 16, 1);
         
-        -- Parsear JSON y validar stock
-        INSERT INTO #TempDetalles (ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
-        SELECT 
-            j.ProductoID,
-            j.Cantidad,
-            p.PrecioVentaBs,
-            0, -- Descuento por producto (se puede calcular si hay promociones)
-            j.Cantidad * p.PrecioVentaBs AS SubtotalBs
-        FROM OPENJSON(@DetallesJSON) WITH (
-            ProductoID INT,
-            Cantidad INT
-        ) AS j
-        INNER JOIN Productos p ON p.ProductoID = j.ProductoID
-        WHERE p.Activo = 1 AND p.StockActual >= j.Cantidad;
+        UPDATE Ventas SET EstadoID = @NuevoEstadoID WHERE VentaID = @VentaID;
         
-        -- Verificar que todos los productos tengan stock
-        IF EXISTS (
-            SELECT 1 FROM OPENJSON(@DetallesJSON) WITH (ProductoID INT, Cantidad INT) AS j
-            LEFT JOIN Productos p ON p.ProductoID = j.ProductoID
-            WHERE p.ProductoID IS NULL OR p.StockActual < j.Cantidad OR p.Activo = 0
-        )
-        BEGIN
-            THROW 50005, 'Uno o más productos no tienen stock suficiente o no están disponibles', 1;
-        END
-        
-        -- Calcular subtotal
-        SELECT @SubtotalVentaBs = SUM(SubtotalBs) FROM #TempDetalles;
-        
-        -- Aplicar cupón si existe
-        IF @CuponID IS NOT NULL
-        BEGIN
-            DECLARE @TipoDescuentoCupon NVARCHAR(20);
-            DECLARE @ValorDescuentoCupon DECIMAL(10,2);
-            DECLARE @MontoMinCompra DECIMAL(10,2);
-            
-            SELECT 
-                @TipoDescuentoCupon = TipoDescuento,
-                @ValorDescuentoCupon = ValorDescuento,
-                @MontoMinCompra = MontoMinCompra
-            FROM Cupones
-            WHERE CuponID = @CuponID AND Activo = 1;
-            
-            IF @SubtotalVentaBs >= @MontoMinCompra
-            BEGIN
-                IF @TipoDescuentoCupon = 'PORCENTAJE'
-                    SET @DescuentoCuponBs = @SubtotalVentaBs * (@ValorDescuentoCupon / 100);
-                ELSE IF @TipoDescuentoCupon = 'MONTO_FIJO'
-                    SET @DescuentoCuponBs = @ValorDescuentoCupon;
-            END
-        END
-        
-        SET @TotalVentaBs = @SubtotalVentaBs - @DescuentoPromocionBs - @DescuentoCuponBs;
-        
-        -- Insertar venta
-        INSERT INTO Ventas (
-            NumeroFactura, ClienteID, DireccionEnvioID, SubtotalVentaBs, 
-            DescuentoPromocionBs, DescuentoCuponBs, TotalVentaBs, 
-            MetodoPagoID, EstadoID, CuponID, Observaciones
-        )
-        VALUES (
-            @NumeroFactura, @ClienteID, @DireccionEnvioID, @SubtotalVentaBs,
-            @DescuentoPromocionBs, @DescuentoCuponBs, @TotalVentaBs,
-            @MetodoPagoID, @EstadoPendienteID, @CuponID, @Observaciones
-        );
-        
-        SET @VentaID = SCOPE_IDENTITY();
-        
-        -- Insertar detalles
-        INSERT INTO DetalleVentas (VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
-        SELECT @VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs
-        FROM #TempDetalles;
-        
-        -- Actualizar stock de productos
-        UPDATE p
-        SET p.StockActual = p.StockActual - t.Cantidad
-        FROM Productos p
-        INNER JOIN #TempDetalles t ON p.ProductoID = t.ProductoID;
-        
-        -- Registrar movimientos de stock
-        INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID)
-        SELECT 
-            t.ProductoID,
-            (SELECT TipoMovimientoID FROM TiposMovimiento WHERE NombreTipo = 'VENTA'),
-            t.Cantidad,
-            p.StockActual + t.Cantidad, -- Stock anterior
-            p.StockActual, -- Stock nuevo
-            @UsuarioID,
-            'Ventas',
-            @VentaID
-        FROM #TempDetalles t
-        INNER JOIN Productos p ON t.ProductoID = p.ProductoID;
-        
-        -- Registrar historial de estado
         INSERT INTO HistorialEstadoPedido (VentaID, EstadoID, UsuarioID, Comentario)
-        VALUES (@VentaID, @EstadoPendienteID, @UsuarioID, 'Venta creada');
-        
-        -- Actualizar uso de cupón
-        IF @CuponID IS NOT NULL
-        BEGIN
-            UPDATE Cupones SET UsosActuales = UsosActuales + 1 WHERE CuponID = @CuponID;
-        END
-        
-        DROP TABLE #TempDetalles;
-        
-        SELECT @VentaID AS VentaID, @NumeroFactura AS NumeroFactura, @TotalVentaBs AS TotalVentaBs;
+        VALUES (@VentaID, @NuevoEstadoID, @UsuarioID, @Comentario);
         
         COMMIT TRANSACTION;
+        
+        SELECT @VentaID AS VentaID, @NuevoEstadoID AS EstadoID, 'Estado actualizado' AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+PRINT '✓ Gestión de Ventas: 2 SPs creados';
+GO
+
+-- =============================================
+-- CATEGORÍA 5: GESTIÓN DE DEVOLUCIONES
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_SolicitarDevolucion')
+    DROP PROCEDURE sp_SolicitarDevolucion;
+GO
+
+CREATE PROCEDURE sp_SolicitarDevolucion
+    @VentaID INT,
+    @ClienteID INT,
+    @Motivo NVARCHAR(500),
+    @DetallesJSON NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        DECLARE @DevolucionID INT;
+        DECLARE @TotalReembolsoBs DECIMAL(12,2) = 0;
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM Ventas WITH (HOLDLOCK)
+            WHERE VentaID = @VentaID 
+            AND ClienteID = @ClienteID 
+            AND EstadoID = 5
+        )
+        BEGIN
+            RAISERROR('Venta no encontrada, no pertenece al cliente, o no está entregada', 16, 1);
+        END
+        
+        IF EXISTS (
+            SELECT 1 FROM Devoluciones 
+            WHERE VentaID = @VentaID 
+            AND EstadoID IN (1, 2, 3)
+        )
+        BEGIN
+            RAISERROR('Ya existe una devolución pendiente para esta venta', 16, 1);
+        END
+        
+        CREATE TABLE #TempDevoluciones (
+            ProductoID INT,
+            CantidadDevuelta INT,
+            PrecioUnitarioBs DECIMAL(10,2),
+            SubtotalReembolsoBs DECIMAL(12,2),
+            CondicionProducto NVARCHAR(50)
+        );
+        
+        INSERT INTO #TempDevoluciones (ProductoID, CantidadDevuelta, PrecioUnitarioBs, SubtotalReembolsoBs, CondicionProducto)
+        SELECT 
+            j.ProductoID,
+            j.CantidadDevuelta,
+            dv.PrecioUnitarioBs,
+            j.CantidadDevuelta * dv.PrecioUnitarioBs,
+            j.CondicionProducto
+        FROM OPENJSON(@DetallesJSON) WITH (
+            ProductoID INT,
+            CantidadDevuelta INT,
+            CondicionProducto NVARCHAR(50)
+        ) AS j
+        INNER JOIN DetalleVentas dv ON dv.VentaID = @VentaID AND dv.ProductoID = j.ProductoID;
+        
+        IF EXISTS (
+            SELECT 1 FROM #TempDevoluciones t
+            INNER JOIN DetalleVentas dv ON dv.VentaID = @VentaID AND dv.ProductoID = t.ProductoID
+            WHERE t.CantidadDevuelta > dv.Cantidad
+        )
+        BEGIN
+            RAISERROR('No se puede devolver más cantidad de la comprada', 16, 1);
+        END
+        
+        SELECT @TotalReembolsoBs = SUM(SubtotalReembolsoBs) FROM #TempDevoluciones;
+        
+        INSERT INTO Devoluciones (VentaID, ClienteID, Motivo, EstadoID, TotalReembolsoBs)
+        VALUES (@VentaID, @ClienteID, @Motivo, 1, @TotalReembolsoBs);
+        
+        SET @DevolucionID = SCOPE_IDENTITY();
+        
+        INSERT INTO DetalleDevoluciones (DevolucionID, ProductoID, CantidadDevuelta, PrecioUnitarioBs, SubtotalReembolsoBs, CondicionProducto)
+        SELECT @DevolucionID, ProductoID, CantidadDevuelta, PrecioUnitarioBs, SubtotalReembolsoBs, CondicionProducto
+        FROM #TempDevoluciones;
+        
+        INSERT INTO HistorialEstadoDevolucion (DevolucionID, EstadoID, UsuarioID, Comentario)
+        VALUES (@DevolucionID, 1, NULL, 'Cliente solicita devolución - ' + @Motivo);
+        
+        DROP TABLE #TempDevoluciones;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT @DevolucionID AS DevolucionID, @TotalReembolsoBs AS TotalReembolsoBs, 'Devolución solicitada exitosamente' AS Mensaje;
+        
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
         
-        IF OBJECT_ID('tempdb..#TempDetalles') IS NOT NULL
-            DROP TABLE #TempDetalles;
+        IF OBJECT_ID('tempdb..#TempDevoluciones') IS NOT NULL
+            DROP TABLE #TempDevoluciones;
         
         THROW;
     END CATCH
 END
 GO
 
-PRINT '✓ Stored procedures creados exitosamente';
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CambiarEstadoDevolucion')
+    DROP PROCEDURE sp_CambiarEstadoDevolucion;
 GO
 
--- =============================================
--- SECCIÓN 3: TRIGGERS CON AUDITORÍA
--- =============================================
-
-PRINT 'Creando triggers con auditoría...';
-GO
-
--- Trigger: Auditoría en Usuarios
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_Auditoria_Usuarios')
-    DROP TRIGGER trg_Auditoria_Usuarios;
-GO
-
-CREATE TRIGGER trg_Auditoria_Usuarios
-ON Usuarios
-AFTER INSERT, UPDATE, DELETE
+CREATE PROCEDURE sp_CambiarEstadoDevolucion
+    @DevolucionID INT,
+    @NuevoEstadoID INT,
+    @UsuarioID INT,
+    @Comentario NVARCHAR(500) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
-    DECLARE @TipoOperacion NVARCHAR(20);
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
     
-    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
-        SET @TipoOperacion = 'UPDATE';
-    ELSE IF EXISTS (SELECT * FROM inserted)
-        SET @TipoOperacion = 'INSERT';
-    ELSE
-        SET @TipoOperacion = 'DELETE';
-    
-    INSERT INTO Auditoria (NombreTabla, TipoOperacion, RegistroID, ValoresAnteriores, ValoresNuevos, Descripcion)
-    SELECT 
-        'Usuarios',
-        @TipoOperacion,
-        COALESCE(i.UsuarioID, d.UsuarioID),
-        (SELECT d.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        (SELECT i.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        CASE 
-            WHEN @TipoOperacion = 'INSERT' THEN 'Nuevo usuario registrado: ' + i.Email
-            WHEN @TipoOperacion = 'UPDATE' THEN 'Usuario actualizado: ' + i.Email
-            WHEN @TipoOperacion = 'DELETE' THEN 'Usuario eliminado: ' + d.Email
-        END
-    FROM inserted i
-    FULL OUTER JOIN deleted d ON i.UsuarioID = d.UsuarioID;
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @EstadoActual INT;
+            
+            SELECT @EstadoActual = EstadoID 
+            FROM Devoluciones WITH (UPDLOCK, HOLDLOCK)
+            WHERE DevolucionID = @DevolucionID;
+            
+            IF @EstadoActual IS NULL
+                RAISERROR('Devolución no encontrada', 16, 1);
+            
+            UPDATE Devoluciones 
+            SET EstadoID = @NuevoEstadoID,
+                UsuarioAprobador = @UsuarioID,
+                FechaResolucion = CASE WHEN @NuevoEstadoID IN (3, 4) THEN GETDATE() ELSE FechaResolucion END
+            WHERE DevolucionID = @DevolucionID;
+            
+            INSERT INTO HistorialEstadoDevolucion (DevolucionID, EstadoID, UsuarioID, Comentario)
+            VALUES (@DevolucionID, @NuevoEstadoID, @UsuarioID, @Comentario);
+            
+            IF @NuevoEstadoID = 3
+            BEGIN
+                UPDATE p
+                SET p.StockActual = p.StockActual + dd.CantidadDevuelta
+                FROM Productos p WITH (UPDLOCK, HOLDLOCK)
+                INNER JOIN DetalleDevoluciones dd ON p.ProductoID = dd.ProductoID
+                WHERE dd.DevolucionID = @DevolucionID;
+                
+                INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones)
+                SELECT 
+                    dd.ProductoID,
+                    3,
+                    dd.CantidadDevuelta,
+                    p.StockActual - dd.CantidadDevuelta,
+                    p.StockActual,
+                    @UsuarioID,
+                    'Devoluciones',
+                    @DevolucionID,
+                    'Devolución aprobada - Producto: ' + dd.CondicionProducto
+                FROM DetalleDevoluciones dd
+                INNER JOIN Productos p ON dd.ProductoID = p.ProductoID
+                WHERE dd.DevolucionID = @DevolucionID;
+            END
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT @DevolucionID AS DevolucionID, @NuevoEstadoID AS EstadoID, 'Estado de devolución actualizado' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CambiarEstadoDevolucion, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
 END
 GO
 
--- Trigger: Auditoría en Productos
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_Auditoria_Productos')
-    DROP TRIGGER trg_Auditoria_Productos;
+PRINT '✓ Gestión de Devoluciones: 2 SPs creados';
 GO
 
-CREATE TRIGGER trg_Auditoria_Productos
-ON Productos
-AFTER INSERT, UPDATE, DELETE
+-- =============================================
+-- CATEGORÍA 6: GESTIÓN DE PROMOCIONES
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearPromocion')
+    DROP PROCEDURE sp_CrearPromocion;
+GO
+
+CREATE PROCEDURE sp_CrearPromocion
+    @NombrePromocion NVARCHAR(150),
+    @Descripcion NVARCHAR(500) = NULL,
+    @TipoDescuento NVARCHAR(20),
+    @ValorDescuento DECIMAL(10,2),
+    @FechaInicio DATETIME,
+    @FechaFin DATETIME,
+    @ProductosJSON NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
-    DECLARE @TipoOperacion NVARCHAR(20);
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
     
-    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
-        SET @TipoOperacion = 'UPDATE';
-    ELSE IF EXISTS (SELECT * FROM inserted)
-        SET @TipoOperacion = 'INSERT';
-    ELSE
-        SET @TipoOperacion = 'DELETE';
-    
-    -- Alerta de stock bajo
-    IF @TipoOperacion = 'UPDATE'
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
     BEGIN
-        IF EXISTS (
-            SELECT 1 FROM inserted i
-            WHERE i.StockActual <= i.StockMinimo AND i.Activo = 1
-        )
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @PromocionID INT;
+            
+            IF @TipoDescuento NOT IN ('PORCENTAJE', 'MONTO_FIJO', '4X3')
+            BEGIN
+                RAISERROR('Tipo de descuento inválido. Use: PORCENTAJE, MONTO_FIJO o 4X3', 16, 1);
+            END
+            
+            IF @TipoDescuento = 'PORCENTAJE' AND (@ValorDescuento <= 0 OR @ValorDescuento > 100)
+            BEGIN
+                RAISERROR('Para descuento por PORCENTAJE el valor debe estar entre 0 y 100', 16, 1);
+            END
+            
+            IF @FechaFin <= @FechaInicio
+            BEGIN
+                RAISERROR('La fecha de fin debe ser posterior a la fecha de inicio', 16, 1);
+            END
+            
+            IF EXISTS (
+                SELECT 1 
+                FROM Promociones WITH (UPDLOCK, HOLDLOCK) 
+                WHERE NombrePromocion = @NombrePromocion 
+                AND Activa = 1
+            )
+            BEGIN
+                RAISERROR('Ya existe una promoción activa con ese nombre', 16, 1);
+            END
+            
+            INSERT INTO Promociones (
+                NombrePromocion, 
+                Descripcion, 
+                TipoDescuento, 
+                ValorDescuento, 
+                FechaInicio, 
+                FechaFin, 
+                Activa
+            )
+            VALUES (
+                @NombrePromocion,
+                @Descripcion,
+                @TipoDescuento,
+                @ValorDescuento,
+                @FechaInicio,
+                @FechaFin,
+                1
+            );
+            
+            SET @PromocionID = SCOPE_IDENTITY();
+            
+            IF @ProductosJSON IS NOT NULL
+            BEGIN
+                INSERT INTO ProductosEnPromocion (PromocionID, ProductoID)
+                SELECT 
+                    @PromocionID,
+                    ProductoID
+                FROM OPENJSON(@ProductosJSON) WITH (ProductoID INT '$') AS j
+                WHERE EXISTS (
+                    SELECT 1 FROM Productos p 
+                    WHERE p.ProductoID = j.ProductoID 
+                    AND p.Activo = 1
+                );
+            END
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @PromocionID AS PromocionID,
+                'Promoción creada exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock detectado en sp_CrearPromocion, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_AsignarProductosPromocion')
+    DROP PROCEDURE sp_AsignarProductosPromocion;
+GO
+
+CREATE PROCEDURE sp_AsignarProductosPromocion
+    @PromocionID INT,
+    @ProductosJSON NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        DECLARE @Activa BIT;
+        
+        SELECT @Activa = Activa
+        FROM Promociones WITH (HOLDLOCK)
+        WHERE PromocionID = @PromocionID;
+        
+        IF @Activa IS NULL
         BEGIN
-            PRINT 'ALERTA: Productos con stock bajo detectados';
+            RAISERROR('Promoción no encontrada', 16, 1);
         END
-    END
-    
-    INSERT INTO Auditoria (NombreTabla, TipoOperacion, RegistroID, ValoresAnteriores, ValoresNuevos, Descripcion)
-    SELECT 
-        'Productos',
-        @TipoOperacion,
-        COALESCE(i.ProductoID, d.ProductoID),
-        (SELECT d.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        (SELECT i.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        CASE 
-            WHEN @TipoOperacion = 'INSERT' THEN 'Nuevo producto: ' + i.NombreProducto
-            WHEN @TipoOperacion = 'UPDATE' THEN 'Producto actualizado: ' + i.NombreProducto
-            WHEN @TipoOperacion = 'DELETE' THEN 'Producto eliminado: ' + d.NombreProducto
+        
+        IF @Activa = 0
+        BEGIN
+            RAISERROR('No se pueden asignar productos a una promoción inactiva', 16, 1);
         END
-    FROM inserted i
-    FULL OUTER JOIN deleted d ON i.ProductoID = d.ProductoID;
+        
+        MERGE ProductosEnPromocion AS Target
+        USING (
+            SELECT 
+                @PromocionID AS PromocionID,
+                j.ProductoID
+            FROM OPENJSON(@ProductosJSON) WITH (ProductoID INT '$') AS j
+            INNER JOIN Productos p ON j.ProductoID = p.ProductoID
+            WHERE p.Activo = 1
+        ) AS Source
+        ON Target.PromocionID = Source.PromocionID 
+        AND Target.ProductoID = Source.ProductoID
+        WHEN NOT MATCHED BY TARGET THEN
+            INSERT (PromocionID, ProductoID)
+            VALUES (Source.PromocionID, Source.ProductoID);
+        
+        COMMIT TRANSACTION;
+        
+        SELECT 
+            @PromocionID AS PromocionID,
+            'Productos asignados exitosamente' AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        
+        THROW;
+    END CATCH
 END
 GO
 
--- Trigger: Auditoría en Ventas
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_Auditoria_Ventas')
-    DROP TRIGGER trg_Auditoria_Ventas;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CambiarEstadoPromocion')
+    DROP PROCEDURE sp_CambiarEstadoPromocion;
 GO
 
-CREATE TRIGGER trg_Auditoria_Ventas
-ON Ventas
-AFTER INSERT, UPDATE
+CREATE PROCEDURE sp_CambiarEstadoPromocion
+    @PromocionID INT,
+    @Activa BIT
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
     
-    DECLARE @TipoOperacion NVARCHAR(20);
-    
-    IF EXISTS (SELECT * FROM deleted)
-        SET @TipoOperacion = 'UPDATE';
-    ELSE
-        SET @TipoOperacion = 'INSERT';
-    
-    INSERT INTO Auditoria (NombreTabla, TipoOperacion, RegistroID, ValoresAnteriores, ValoresNuevos, Descripcion)
-    SELECT 
-        'Ventas',
-        @TipoOperacion,
-        i.VentaID,
-        (SELECT d.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        (SELECT i.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-        CASE 
-            WHEN @TipoOperacion = 'INSERT' THEN 'Nueva venta: ' + i.NumeroFactura + ' - Bs ' + CAST(i.TotalVentaBs AS NVARCHAR)
-            WHEN @TipoOperacion = 'UPDATE' THEN 'Venta actualizada: ' + i.NumeroFactura
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        IF NOT EXISTS (SELECT 1 FROM Promociones WHERE PromocionID = @PromocionID)
+        BEGIN
+            RAISERROR('Promoción no encontrada', 16, 1);
         END
-    FROM inserted i
-    LEFT JOIN deleted d ON i.VentaID = d.VentaID;
+        
+        UPDATE Promociones WITH (UPDLOCK)
+        SET Activa = @Activa
+        WHERE PromocionID = @PromocionID;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT 
+            @PromocionID AS PromocionID,
+            CASE WHEN @Activa = 1 THEN 'Promoción activada' ELSE 'Promoción desactivada' END AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        
+        THROW;
+    END CATCH
 END
 GO
 
--- Trigger: Validar Stock Antes de Venta
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_ValidarStock_DetalleVentas')
-    DROP TRIGGER trg_ValidarStock_DetalleVentas;
-GO
-
-CREATE TRIGGER trg_ValidarStock_DetalleVentas
-ON DetalleVentas
-INSTEAD OF INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Verificar stock disponible
-    IF EXISTS (
-        SELECT 1 
-        FROM inserted i
-        INNER JOIN Productos p ON i.ProductoID = p.ProductoID
-        WHERE p.StockActual < i.Cantidad
-    )
-    BEGIN
-        RAISERROR('Stock insuficiente para uno o más productos', 16, 1);
-        RETURN;
-    END
-    
-    -- Si hay stock suficiente, proceder con la inserción
-    INSERT INTO DetalleVentas (VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
-    SELECT VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs
-    FROM inserted;
-END
-GO
-
--- Trigger: Validar Máximo 3 Direcciones
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_ValidarMaxDirecciones')
-    DROP TRIGGER trg_ValidarMaxDirecciones;
-GO
-
-CREATE TRIGGER trg_ValidarMaxDirecciones
-ON Direcciones
-INSTEAD OF INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Verificar que no se exceda el límite de 3 direcciones
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        WHERE (
-            SELECT COUNT(*) 
-            FROM Direcciones 
-            WHERE ClienteID = i.ClienteID AND Activo = 1
-        ) >= 3
-    )
-    BEGIN
-        RAISERROR('El cliente ya tiene el máximo de 3 direcciones activas', 16, 1);
-        RETURN;
-    END
-    
-    -- Proceder con la inserción
-    INSERT INTO Direcciones (ClienteID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal, Activo)
-    SELECT ClienteID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal, Activo
-    FROM inserted;
-END
-GO
-
-PRINT '✓ Triggers con auditoría creados exitosamente';
+PRINT '✓ Gestión de Promociones: 3 SPs creados';
 GO
 
 -- =============================================
--- SECCIÓN 4: VISTAS PARA REPORTES
+-- CATEGORÍA 7: GESTIÓN DE CUPONES
 -- =============================================
 
-PRINT 'Creando vistas para reportes...';
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearCupon')
+    DROP PROCEDURE sp_CrearCupon;
 GO
 
--- Vista: Productos con Stock Bajo
-IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_ProductosStockBajo')
-    DROP VIEW vw_ProductosStockBajo;
+CREATE PROCEDURE sp_CrearCupon
+    @CodigoCupon NVARCHAR(50),
+    @Descripcion NVARCHAR(255) = NULL,
+    @TipoDescuento NVARCHAR(20),
+    @ValorDescuento DECIMAL(10,2),
+    @MontoMinCompra DECIMAL(10,2) = 0,
+    @UsosMaximos INT = NULL,
+    @FechaInicio DATETIME,
+    @FechaExpiracion DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @CuponID INT;
+            
+            IF @TipoDescuento NOT IN ('PORCENTAJE', 'MONTO_FIJO')
+            BEGIN
+                RAISERROR('Tipo de descuento inválido. Use: PORCENTAJE o MONTO_FIJO', 16, 1);
+            END
+            
+            IF @TipoDescuento = 'PORCENTAJE' AND (@ValorDescuento <= 0 OR @ValorDescuento > 100)
+            BEGIN
+                RAISERROR('Para descuento por PORCENTAJE el valor debe estar entre 0 y 100', 16, 1);
+            END
+            
+            IF @FechaExpiracion <= @FechaInicio
+            BEGIN
+                RAISERROR('La fecha de expiración debe ser posterior a la fecha de inicio', 16, 1);
+            END
+            
+            IF EXISTS (
+                SELECT 1 
+                FROM Cupones WITH (UPDLOCK, HOLDLOCK) 
+                WHERE CodigoCupon = @CodigoCupon
+            )
+            BEGIN
+                RAISERROR('Ya existe un cupón con ese código', 16, 1);
+            END
+            
+            INSERT INTO Cupones (
+                CodigoCupon,
+                Descripcion,
+                TipoDescuento,
+                ValorDescuento,
+                MontoMinCompra,
+                UsosMaximos,
+                UsosActuales,
+                FechaInicio,
+                FechaExpiracion,
+                Activo
+            )
+            VALUES (
+                @CodigoCupon,
+                @Descripcion,
+                @TipoDescuento,
+                @ValorDescuento,
+                @MontoMinCompra,
+                @UsosMaximos,
+                0,
+                @FechaInicio,
+                @FechaExpiracion,
+                1
+            );
+            
+            SET @CuponID = SCOPE_IDENTITY();
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @CuponID AS CuponID,
+                @CodigoCupon AS CodigoCupon,
+                'Cupón creado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CrearCupon, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
 GO
 
-CREATE VIEW vw_ProductosStockBajo AS
-SELECT 
-    p.ProductoID,
-    p.CodigoProducto,
-    p.NombreProducto,
-    c.NombreCategoria,
-    m.NombreMarca,
-    p.StockActual,
-    p.StockMinimo,
-    p.PrecioVentaBs,
-    (p.StockMinimo - p.StockActual) AS CantidadAReponer
-FROM Productos p
-INNER JOIN Categorias c ON p.CategoriaID = c.CategoriaID
-INNER JOIN Marcas m ON p.MarcaID = m.MarcaID
-WHERE p.StockActual <= p.StockMinimo AND p.Activo = 1;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ValidarCupon')
+    DROP PROCEDURE sp_ValidarCupon;
 GO
 
--- Vista: Historial de Compras por Cliente
-IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_HistorialComprasCliente')
-    DROP VIEW vw_HistorialComprasCliente;
+CREATE PROCEDURE sp_ValidarCupon
+    @CodigoCupon NVARCHAR(50),
+    @MontoCompra DECIMAL(10,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    
+    BEGIN TRY
+        DECLARE @CuponID INT;
+        DECLARE @Activo BIT;
+        DECLARE @TipoDescuento NVARCHAR(20);
+        DECLARE @ValorDescuento DECIMAL(10,2);
+        DECLARE @MontoMinCompra DECIMAL(10,2);
+        DECLARE @UsosMaximos INT;
+        DECLARE @UsosActuales INT;
+        DECLARE @FechaInicio DATETIME;
+        DECLARE @FechaExpiracion DATETIME;
+        DECLARE @DescuentoCalculado DECIMAL(10,2);
+        
+        SELECT 
+            @CuponID = CuponID,
+            @Activo = Activo,
+            @TipoDescuento = TipoDescuento,
+            @ValorDescuento = ValorDescuento,
+            @MontoMinCompra = MontoMinCompra,
+            @UsosMaximos = UsosMaximos,
+            @UsosActuales = UsosActuales,
+            @FechaInicio = FechaInicio,
+            @FechaExpiracion = FechaExpiracion
+        FROM Cupones
+        WHERE CodigoCupon = @CodigoCupon;
+        
+        IF @CuponID IS NULL
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Cupón no encontrado' AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF @Activo = 0
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Cupón inactivo' AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF GETDATE() < @FechaInicio
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Cupón aún no está vigente' AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF GETDATE() > @FechaExpiracion
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Cupón expirado' AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF @MontoCompra < @MontoMinCompra
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Monto mínimo de compra no alcanzado. Mínimo: Bs ' + CAST(@MontoMinCompra AS NVARCHAR) AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF @UsosMaximos IS NOT NULL AND @UsosActuales >= @UsosMaximos
+        BEGIN
+            SELECT 
+                0 AS Valido,
+                'Cupón agotado (máximo de usos alcanzado)' AS Mensaje,
+                0.00 AS DescuentoBs;
+            RETURN;
+        END
+        
+        IF @TipoDescuento = 'PORCENTAJE'
+        BEGIN
+            SET @DescuentoCalculado = @MontoCompra * (@ValorDescuento / 100.0);
+        END
+        ELSE
+        BEGIN
+            SET @DescuentoCalculado = @ValorDescuento;
+        END
+        
+        SELECT 
+            1 AS Valido,
+            'Cupón válido' AS Mensaje,
+            @CuponID AS CuponID,
+            @TipoDescuento AS TipoDescuento,
+            @ValorDescuento AS ValorDescuento,
+            @DescuentoCalculado AS DescuentoBs;
+        
+    END TRY
+    BEGIN CATCH
+        SELECT 
+            0 AS Valido,
+            'Error al validar cupón: ' + ERROR_MESSAGE() AS Mensaje,
+            0.00 AS DescuentoBs;
+    END CATCH
+END
 GO
 
-CREATE VIEW vw_HistorialComprasCliente AS
-SELECT 
-    v.VentaID,
-    v.NumeroFactura,
-    v.FechaVenta,
-    c.ClienteID,
-    c.TipoCliente,
-    CASE 
-        WHEN c.TipoCliente = 'Persona' THEN p.Nombres + ' ' + p.ApellidoPaterno
-        ELSE e.RazonSocial
-    END AS NombreCliente,
-    c.NumeroDocumento,
-    v.TotalVentaBs,
-    ep.NombreEstado,
-    mp.NombreMetodo AS MetodoPago
-FROM Ventas v
-INNER JOIN Clientes c ON v.ClienteID = c.ClienteID
-LEFT JOIN Personas p ON c.ClienteID = p.ClienteID AND c.TipoCliente = 'Persona'
-LEFT JOIN Empresas e ON c.ClienteID = e.ClienteID AND c.TipoCliente = 'Empresa'
-INNER JOIN EstadosPedido ep ON v.EstadoID = ep.EstadoID
-INNER JOIN MetodosPago mp ON v.MetodoPagoID = mp.MetodoPagoID;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_AplicarCupon')
+    DROP PROCEDURE sp_AplicarCupon;
 GO
 
--- Vista: Ventas Diarias (Santa Cruz)
-IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_VentasDiarias')
-    DROP VIEW vw_VentasDiarias;
+CREATE PROCEDURE sp_AplicarCupon
+    @CuponID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @UsosMaximos INT;
+            DECLARE @UsosActuales INT;
+            
+            SELECT 
+                @UsosMaximos = UsosMaximos,
+                @UsosActuales = UsosActuales
+            FROM Cupones WITH (UPDLOCK, HOLDLOCK)
+            WHERE CuponID = @CuponID;
+            
+            IF @UsosMaximos IS NOT NULL AND @UsosActuales >= @UsosMaximos
+            BEGIN
+                RAISERROR('Cupón agotado', 16, 1);
+            END
+            
+            UPDATE Cupones
+            SET UsosActuales = UsosActuales + 1
+            WHERE CuponID = @CuponID;
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @CuponID AS CuponID,
+                'Cupón aplicado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_AplicarCupon, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
 GO
 
-CREATE VIEW vw_VentasDiarias AS
-SELECT 
-    CAST(FechaVenta AS DATE) AS Fecha,
-    COUNT(*) AS CantidadVentas,
-    SUM(TotalVentaBs) AS TotalVentasBs,
-    AVG(TotalVentaBs) AS PromedioVentaBs,
-    MIN(TotalVentaBs) AS VentaMinimaBs,
-    MAX(TotalVentaBs) AS VentaMaximaBs
-FROM Ventas
-GROUP BY CAST(FechaVenta AS DATE);
+PRINT '✓ Gestión de Cupones: 3 SPs creados';
 GO
 
--- Vista: Productos Más Vendidos
-IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_ProductosMasVendidos')
-    DROP VIEW vw_ProductosMasVendidos;
+-- =============================================
+-- CATEGORÍA 8: GESTIÓN DE DIRECCIONES
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_AgregarDireccionCliente')
+    DROP PROCEDURE sp_AgregarDireccionCliente;
 GO
 
-CREATE VIEW vw_ProductosMasVendidos AS
-SELECT 
-    p.ProductoID,
-    p.CodigoProducto,
-    p.NombreProducto,
-    c.NombreCategoria,
-    m.NombreMarca,
-    SUM(dv.Cantidad) AS CantidadVendida,
-    SUM(dv.SubtotalBs) AS TotalVentasBs,
-    COUNT(DISTINCT dv.VentaID) AS NumeroVentas,
-    AVG(dv.PrecioUnitarioBs) AS PrecioPromedioVentaBs
-FROM DetalleVentas dv
-INNER JOIN Productos p ON dv.ProductoID = p.ProductoID
-INNER JOIN Categorias c ON p.CategoriaID = c.CategoriaID
-INNER JOIN Marcas m ON p.MarcaID = m.MarcaID
-GROUP BY p.ProductoID, p.CodigoProducto, p.NombreProducto, c.NombreCategoria, m.NombreMarca;
+CREATE PROCEDURE sp_AgregarDireccionCliente
+    @ClienteID INT,
+    @NombreDireccion NVARCHAR(50) = NULL,
+    @Calle NVARCHAR(255),
+    @Zona NVARCHAR(100) = NULL,
+    @CiudadID INT,
+    @Referencia NVARCHAR(255) = NULL,
+    @EsPrincipal BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @DireccionID INT;
+            
+            IF NOT EXISTS (SELECT 1 FROM Clientes WHERE ClienteID = @ClienteID)
+            BEGIN
+                RAISERROR('Cliente no encontrado', 16, 1);
+            END
+            
+            IF NOT EXISTS (SELECT 1 FROM Ciudades WHERE CiudadID = @CiudadID)
+            BEGIN
+                RAISERROR('Ciudad no encontrada', 16, 1);
+            END
+            
+            IF @EsPrincipal = 1
+            BEGIN
+                UPDATE Direcciones WITH (UPDLOCK)
+                SET EsPrincipal = 0
+                WHERE ClienteID = @ClienteID
+                AND EsPrincipal = 1
+                AND Activo = 1;
+            END
+            
+            INSERT INTO Direcciones (
+                ClienteID,
+                NombreDireccion,
+                Calle,
+                Zona,
+                CiudadID,
+                Referencia,
+                EsPrincipal,
+                Activo
+            )
+            VALUES (
+                @ClienteID,
+                @NombreDireccion,
+                @Calle,
+                @Zona,
+                @CiudadID,
+                @Referencia,
+                @EsPrincipal,
+                1
+            );
+            
+            SET @DireccionID = SCOPE_IDENTITY();
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @DireccionID AS DireccionID,
+                'Dirección agregada exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_AgregarDireccionCliente, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
 GO
 
--- Vista: Reporte de Ventas por Ciudad (Bolivia)
-IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_VentasPorCiudad')
-    DROP VIEW vw_VentasPorCiudad;
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_EstablecerDireccionPrincipal')
+    DROP PROCEDURE sp_EstablecerDireccionPrincipal;
 GO
 
-CREATE VIEW vw_VentasPorCiudad AS
-SELECT 
-    d.NombreDepartamento,
-    ci.NombreCiudad,
-    COUNT(v.VentaID) AS TotalVentas,
-    SUM(v.TotalVentaBs) AS TotalVentasBs
-FROM Ventas v
-INNER JOIN Direcciones dir ON v.DireccionEnvioID = dir.DireccionID
-INNER JOIN Ciudades ci ON dir.CiudadID = ci.CiudadID
-INNER JOIN Departamentos d ON ci.DepartamentoID = d.DepartamentoID
-GROUP BY d.NombreDepartamento, ci.NombreCiudad;
+CREATE PROCEDURE sp_EstablecerDireccionPrincipal
+    @DireccionID INT,
+    @ClienteID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            IF NOT EXISTS (
+                SELECT 1 FROM Direcciones 
+                WHERE DireccionID = @DireccionID 
+                AND ClienteID = @ClienteID
+                AND Activo = 1
+            )
+            BEGIN
+                RAISERROR('Dirección no encontrada o no pertenece al cliente', 16, 1);
+            END
+            
+            UPDATE Direcciones WITH (UPDLOCK)
+            SET EsPrincipal = 0
+            WHERE ClienteID = @ClienteID
+            AND Activo = 1;
+            
+            UPDATE Direcciones
+            SET EsPrincipal = 1
+            WHERE DireccionID = @DireccionID;
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @DireccionID AS DireccionID,
+                'Dirección establecida como principal' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
 GO
 
-PRINT '✓ Vistas para reportes creadas exitosamente';
+PRINT '✓ Gestión de Direcciones: 2 SPs creados';
 GO
 
-PRINT '';
-PRINT '================================================';
-PRINT '✓ OPTIMIZACIONES COMPLETADAS EXITOSAMENTE';
-PRINT '================================================';
-PRINT 'Resumen:';
-PRINT '- 30+ índices optimizados';
-PRINT '- 4 stored procedures';
-PRINT '- 6 triggers (4 auditoría + 2 validación)';
-PRINT '- 5 vistas para reportes';
-PRINT '================================================';
+-- =============================================
+-- CATEGORÍA 9: GESTIÓN DE PROVEEDORES
+-- =============================================
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearProveedor')
+    DROP PROCEDURE sp_CrearProveedor;
 GO
+
+CREATE PROCEDURE sp_CrearProveedor
+    @NombreProveedor NVARCHAR(150),
+    @NIT NVARCHAR(20),
+    @Telefono NVARCHAR(20) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Direccion NVARCHAR(255) = NULL,
+    @CiudadID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    
+    DECLARE @Reintentos INT = 0;
+    DECLARE @MaxReintentos INT = 3;
+    DECLARE @Exitoso BIT = 0;
+    
+    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
+    BEGIN
+        SET @Reintentos = @Reintentos + 1;
+        
+        BEGIN TRY
+            BEGIN TRANSACTION;
+            
+            DECLARE @ProveedorID INT;
+            
+            IF EXISTS (
+                SELECT 1 
+                FROM Proveedores WITH (UPDLOCK, HOLDLOCK) 
+                WHERE NIT = @NIT
+            )
+            BEGIN
+                RAISERROR('Ya existe un proveedor con ese NIT', 16, 1);
+            END
+            
+            IF @CiudadID IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM Ciudades WHERE CiudadID = @CiudadID
+            )
+            BEGIN
+                RAISERROR('Ciudad no encontrada', 16, 1);
+            END
+            
+            INSERT INTO Proveedores (
+                NombreProveedor,
+                NIT,
+                Telefono,
+                Email,
+                Direccion,
+                CiudadID,
+                Activo
+            )
+            VALUES (
+                @NombreProveedor,
+                @NIT,
+                @Telefono,
+                @Email,
+                @Direccion,
+                @CiudadID,
+                1
+            );
+            
+            SET @ProveedorID = SCOPE_IDENTITY();
+            
+            COMMIT TRANSACTION;
+            SET @Exitoso = 1;
+            
+            SELECT 
+                @ProveedorID AS ProveedorID,
+                'Proveedor creado exitosamente' AS Mensaje;
+            
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            
+            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
+            BEGIN
+                PRINT 'Deadlock en sp_CrearProveedor, reintento ' + CAST(@Reintentos AS NVARCHAR);
+                WAITFOR DELAY '00:00:01';
+                CONTINUE;
+            END;
+            
+            THROW;
+        END CATCH
+    END
+END
+GO
+
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ActualizarProveedor')
+    DROP PROCEDURE sp_ActualizarProveedor;
+GO
+
+CREATE PROCEDURE sp_ActualizarProveedor
+    @ProveedorID INT,
+    @NombreProveedor NVARCHAR(150) = NULL,
+    @Telefono NVARCHAR(20) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Direccion NVARCHAR(255) = NULL,
+    @CiudadID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        IF NOT EXISTS (SELECT 1 FROM Proveedores WHERE ProveedorID = @ProveedorID)
+        BEGIN
+            RAISERROR('Proveedor no encontrado', 16, 1);
+        END
+        
+        UPDATE Proveedores WITH (UPDLOCK)
+        SET 
+            NombreProveedor = ISNULL(@NombreProveedor, NombreProveedor),
+            Telefono = ISNULL(@Telefono, Telefono),
+            Email = ISNULL(@Email, Email),
+            Direccion = ISNULL(@Direccion, Direccion),
+            CiudadID = ISNULL(@CiudadID, CiudadID)
+        WHERE ProveedorID = @ProveedorID;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT 
+            @ProveedorID AS ProveedorID,
+            'Proveedor actualizado exitosamente' AS Mensaje;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        
+        THROW;
+    END CATCH
+END
+GO
+
