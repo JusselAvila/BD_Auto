@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro Persona - Avila's Tyre Company</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html" style="color: white; text-decoration: none;">🚗 Avila's Tyre Company</a></h1>
+    <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
+    <div class="header-actions">
+      <a href="index.html" class="btn-login">← Volver</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="form-container">
+      <div class="card form-card">
+        <h2>👤 Registro de Persona</h2>
+        <p class="texto-centrado">Completa tus datos para crear una cuenta</p>
+
+        <form id="form-registro-persona">
+          <div class="campo">
+            <label for="nombres">Nombres *</label>
+            <input type="text" id="nombres" name="nombres" placeholder="Ej: Juan Carlos" required>
+          </div>
+
+          <div class="campo">
+            <label for="apellidoPaterno">Apellido Paterno *</label>
+            <input type="text" id="apellidoPaterno" name="apellidoPaterno" placeholder="Ej: Pérez" required>
+          </div>
+
+          <div class="campo">
+            <label for="apellidoMaterno">Apellido Materno</label>
+            <input type="text" id="apellidoMaterno" name="apellidoMaterno" placeholder="Ej: García">
+          </div>
+
+          <div class="campo">
+            <label for="ci">Carnet de Identidad (CI) *</label>
+            <input type="text" id="ci" name="ci" placeholder="Ej: 7856432" required>
+            <small style="color: #666;">Solo números, sin puntos ni guiones</small>
+          </div>
+
+          <div class="campo">
+            <label for="fechaNacimiento">Fecha de Nacimiento</label>
+            <input type="date" id="fechaNacimiento" name="fechaNacimiento">
+          </div>
+
+          <div class="campo">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" name="telefono" placeholder="Ej: 78945612">
+            <small style="color: #666;">Formato: 7xxxxxxx o 6xxxxxxx</small>
+          </div>
+
+          <div class="campo">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" placeholder="Ej: juan.perez@gmail.com" required>
+          </div>
+
+          <div class="campo">
+            <label for="password">Contraseña *</label>
+            <input type="password" id="password" name="password" required minlength="6">
+            <small style="color: #666;">Mínimo 6 caracteres</small>
+          </div>
+
+          <div class="campo">
+            <label for="password-confirm">Confirmar Contraseña *</label>
+            <input type="password" id="password-confirm" name="password-confirm" required>
+          </div>
+
+          <button type="submit" class="btn-primary btn-block">✅ Registrarse</button>
+
+          <p class="texto-centrado mt-20">
+            ¿Ya tienes cuenta? <a href="login.html">Inicia sesión aquí</a>
+          </p>
+
+          <p class="texto-centrado">
+            ¿Eres una empresa? <a href="registro-empresa.html">🏢 Regístrate como empresa</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer style="background: rgba(0,0,0,0.8); color: white; text-align: center; padding: 20px; margin-top: 40px;">
+    <p>📍 Santa Cruz de la Sierra, Bolivia</p>
+    <p style="font-size: 0.9rem; opacity: 0.8;">© 2024 Avila's Tyre Company</p>
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+
+    document.getElementById('form-registro-persona').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('password-confirm').value;
+
+      if (password !== passwordConfirm) {
+        mostrarMensaje('❌ Las contraseñas no coinciden', 'error');
+        return;
+      }
+
+      const datos = {
+        nombres: document.getElementById('nombres').value,
+        apellidoPaterno: document.getElementById('apellidoPaterno').value,
+        apellidoMaterno: document.getElementById('apellidoMaterno').value || null,
+        ci: document.getElementById('ci').value,
+        fechaNacimiento: document.getElementById('fechaNacimiento').value || null,
+        telefono: document.getElementById('telefono').value || null,
+        email: document.getElementById('email').value,
+        password: password
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/registro/persona`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(datos)
+        });
+
+        const resultado = await response.json();
+
+        if (!response.ok) {
+          throw new Error(resultado.error || 'Error en el registro');
+        }
+
+        mostrarMensaje('✅ Registro exitoso. Redirigiendo al login...', 'success');
+        
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+
+      } catch (err) {
+        console.error('Error en registro:', err);
+        mostrarMensaje('❌ ' + err.message, 'error');
+      }
+    });
+
+    function mostrarMensaje(mensaje, tipo = 'info') {
+      const mensajeDiv = document.createElement('div');
+      mensajeDiv.className = `mensaje mensaje-${tipo}`;
+      mensajeDiv.textContent = mensaje;
+      mensajeDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${tipo === 'success' ? '#4CAF50' : tipo === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-in-out;
+      `;
+      
+      document.body.appendChild(mensajeDiv);
+      
+      setTimeout(() => {
+        mensajeDiv.style.animation = 'slideOut 0.3s ease-in-out';
+        setTimeout(() => mensajeDiv.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

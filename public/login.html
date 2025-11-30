@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión - Avila's Tyre Company</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html" style="color: white; text-decoration: none;">Avila's Tyre Company</a></h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn-login">Volver</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="form-container">
+      <div class="card form-card">
+        <h2>Iniciar Sesión</h2>
+        <p class="texto-centrado">Ingresa a tu cuenta para acceder a todas las funcionalidades</p>
+
+        <form id="form-login">
+          <div class="campo">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+
+          <div class="campo">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required>
+          </div>
+
+          <button type="submit" class="btn-primary btn-block">Iniciar Sesión</button>
+
+          <p class="texto-centrado mt-20">
+            ¿No tienes cuenta? 
+            <a href="registro-persona.html">Registrarse como Persona</a> | 
+            <a href="registro-empresa.html">Registrarse como Empresa</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const datos = {
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(datos)
+        });
+
+        const resultado = await response.json();
+
+        if (!response.ok) {
+          throw new Error(resultado.error || 'Error al iniciar sesión');
+        }
+
+        // Guardar token y datos de usuario
+        localStorage.setItem('authToken', resultado.token);
+        localStorage.setItem('usuario', JSON.stringify(resultado.usuario));
+
+        mostrarMensaje('Inicio de sesión exitoso', 'success');
+        
+        setTimeout(() => {
+          // Redirigir según el rol
+          if (resultado.usuario.idRol === 1) {
+            window.location.href = 'admin.html';
+          } else {
+            window.location.href = 'index.html';
+          }
+        }, 1000);
+
+      } catch (err) {
+        console.error('Error en login:', err);
+        mostrarMensaje(err.message, 'error');
+      }
+    });
+
+    function mostrarMensaje(mensaje, tipo = 'info') {
+      const mensajeDiv = document.createElement('div');
+      mensajeDiv.className = `mensaje mensaje-${tipo}`;
+      mensajeDiv.textContent = mensaje;
+      mensajeDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${tipo === 'success' ? '#4CAF50' : tipo === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 10000;
+      `;
+      
+      document.body.appendChild(mensajeDiv);
+      
+      setTimeout(() => {
+        mensajeDiv.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

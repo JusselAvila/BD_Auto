@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito - Avila's Tyre Company</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html" style="color: white; text-decoration: none;">🚗 Avila's Tyre Company</a></h1>
+    <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
+    <div class="header-actions">
+      <a href="index.html" class="btn-login">← Seguir Comprando</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>🛒 Tu Carrito de Compras</h2>
+
+    <div id="carrito-vacio" style="display: none; text-align: center; padding: 60px 20px;">
+      <p style="font-size: 3rem;">🛒</p>
+      <h3>Tu carrito está vacío</h3>
+      <p style="color: #666; margin: 20px 0;">¡Agrega productos para comenzar tu compra!</p>
+      <a href="index.html" class="btn-primary">Ver Productos</a>
+    </div>
+
+    <div id="carrito-contenido" style="display: none;">
+      <div class="carrito-grid">
+        <div class="carrito-productos">
+          <h3>Productos en tu carrito</h3>
+          <ul id="items-carrito"></ul>
+        </div>
+
+        <div class="carrito-resumen">
+          <div class="card">
+            <h3>Resumen de Compra</h3>
+            <div class="resumen-linea">
+              <span>Subtotal:</span>
+              <span id="subtotal">Bs 0.00</span>
+            </div>
+            <div class="resumen-linea resumen-total">
+              <span><strong>Total:</strong></span>
+              <span id="total"><strong>Bs 0.00</strong></span>
+            </div>
+            <button id="btn-finalizar" class="btn-primary btn-block">✅ Finalizar Compra</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Checkout -->
+    <div id="modal-checkout" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="modal-close" onclick="cerrarModal()">&times;</span>
+        <h2>📦 Finalizar Compra</h2>
+
+        <div id="checkout-autenticado" style="display: none;">
+          <form id="form-checkout">
+            <div class="campo">
+              <label for="direccion-select">🏠 Dirección de Entrega *</label>
+              <select id="direccion-select" required>
+                <option value="">Cargando direcciones...</option>
+              </select>
+              <p style="margin-top: 10px; font-size: 0.9rem;">
+                <a href="#" id="btn-agregar-direccion" style="color: #667eea;">➕ Agregar nueva dirección</a>
+              </p>
+            </div>
+
+            <div class="campo">
+              <label for="metodo-pago">💳 Método de Pago *</label>
+              <select id="metodo-pago" required>
+                <option value="">Cargando métodos...</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="observaciones">📝 Observaciones (Opcional)</label>
+              <textarea id="observaciones" rows="3" placeholder="Ej: Entregar por la mañana"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary btn-block">💰 Confirmar Compra</button>
+          </form>
+        </div>
+
+        <div id="checkout-invitado" style="display: none;">
+          <p style="text-align: center; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 5px;">
+            ℹ️ Debes <a href="login.html" style="color: #667eea; font-weight: bold;">iniciar sesión</a> o 
+            <a href="registro-persona.html" style="color: #667eea; font-weight: bold;">registrarte</a> para comprar.
+          </p>
+          <p style="text-align: center; color: #666;">
+            Al registrarte podrás guardar hasta 3 direcciones y realizar compras rápidamente.
+          </p>
+        </div>
+
+        <!-- Formulario agregar dirección -->
+        <div id="form-nueva-direccion" style="display: none;">
+          <h3>➕ Nueva Dirección de Entrega</h3>
+          <form id="form-agregar-direccion">
+            <div class="campo">
+              <label for="nombre-direccion">Nombre de la Dirección *</label>
+              <input type="text" id="nombre-direccion" placeholder="Ej: Casa, Trabajo" required>
+            </div>
+
+            <div class="campo">
+              <label for="departamento">Departamento *</label>
+              <select id="departamento" required>
+                <option value="">Seleccione un departamento</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="ciudad">Ciudad *</label>
+              <select id="ciudad" required disabled>
+                <option value="">Seleccione un departamento primero</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="zona">Zona/Barrio *</label>
+              <input type="text" id="zona" placeholder="Ej: Equipetrol" required>
+            </div>
+
+            <div class="campo">
+              <label for="calle">Calle/Avenida *</label>
+              <input type="text" id="calle" placeholder="Ej: Av. Santos Dumont #456" required>
+            </div>
+
+            <div class="campo">
+              <label for="referencia">Referencia</label>
+              <textarea id="referencia" rows="2" placeholder="Ej: Cerca del 4to anillo"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary btn-block">Guardar</button>
+            <button type="button" class="btn-secondary btn-block" onclick="cancelarNuevaDireccion()">Cancelar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div id="modal-confirmacion" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2 style="color: #4CAF50; text-align: center;">✅ ¡Compra Exitosa!</h2>
+        <div style="text-align: center; padding: 20px;">
+          <p style="font-size: 3rem;">🎉</p>
+          <p style="font-size: 1.2rem; margin: 20px 0;">Tu pedido ha sido procesado</p>
+          <p style="font-size: 1.5rem; font-weight: bold; color: #667eea;" id="numero-factura"></p>
+          <a href="index.html" class="btn-primary" style="margin-top: 30px; display: inline-block;">🏠 Inicio</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/carrito.js"></script>
+</body>
+</html>
