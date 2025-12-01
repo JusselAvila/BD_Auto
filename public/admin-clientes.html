@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Clientes - Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="admin-wrapper">
+            <!-- SIDEBAR -->
+            <aside class="admin-sidebar">
+                <div class="sidebar-header">
+                    <h2>🎛️ Admin Panel</h2>
+                    <p id="admin-name">Cargando...</p>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="admin.html" class="nav-item">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="admin-productos.html" class="nav-item">
+                        <span class="nav-icon">📦</span>
+                        <span class="nav-text">Productos</span>
+                    </a>
+                    <a href="admin-clientes.html" class="nav-item active">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Clientes</span>
+                    </a>
+                    <a href="admin-ventas.html" class="nav-item">
+                        <span class="nav-icon">💰</span>
+                        <span class="nav-text">Ventas</span>
+                    </a>
+                    <div class="nav-divider"></div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-text">Ir al Inicio</span>
+                    </a>
+                    <a href="#" class="nav-item" id="btn-logout-admin">
+                        <span class="nav-icon">🚪</span>
+                        <span class="nav-text">Cerrar Sesión</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="admin-main">
+                <header class="admin-header">
+                    <h1>👥 Gestión de Clientes</h1>
+                </header>
+
+                <!-- SEARCH BAR -->
+                <div class="admin-section">
+                    <div class="search-bar">
+                        <input type="text" class="search-input" id="search-clientes"
+                            placeholder="Buscar por nombre, email, CI o NIT...">
+                        <select class="search-input" id="filter-tipo" style="max-width: 200px;">
+                            <option value="">Todos los tipos</option>
+                            <option value="Persona">Personas</option>
+                            <option value="Empresa">Empresas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- CLIENTS TABLE -->
+                <div class="admin-section">
+                    <div class="table-container">
+                        <table class="admin-table" id="clientes-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Compras</th>
+                                    <th>Total Gastado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px;">
+                                        <div class="spinner"></div>
+                                        <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando clientes...
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIAL -->
+    <div id="modal-historial" class="admin-modal">
+        <div class="admin-modal-content" style="max-width: 900px;">
+            <div class="admin-modal-header">
+                <h2>📋 Historial de Compras</h2>
+                <button class="btn-close" onclick="closeModal('modal-historial')">&times;</button>
+            </div>
+            <div class="admin-modal-body">
+                <div
+                    style="margin-bottom: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+                    <h3 id="historial-cliente-nombre" style="color: white; margin-bottom: 10px;"></h3>
+                    <p id="historial-cliente-email" style="color: rgba(255,255,255,0.7);"></p>
+                </div>
+
+                <div class="table-container">
+                    <table class="admin-table" id="historial-table">
+                        <thead>
+                            <tr>
+                                <th>Factura</th>
+                                <th>Fecha</th>
+                                <th>Productos</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">Cargando historial...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin-common.js"></script>
+    <script src="js/admin-clientes.js"></script>
+
+</body>
+
+</html>

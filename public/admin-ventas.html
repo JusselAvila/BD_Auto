@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ventas y Facturación - Admin</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="admin-wrapper">
+            <!-- SIDEBAR -->
+            <aside class="admin-sidebar">
+                <div class="sidebar-header">
+                    <h2>🎛️ Admin Panel</h2>
+                    <p id="admin-name">Cargando...</p>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="admin.html" class="nav-item">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="admin-productos.html" class="nav-item">
+                        <span class="nav-icon">📦</span>
+                        <span class="nav-text">Productos</span>
+                    </a>
+                    <a href="admin-clientes.html" class="nav-item">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Clientes</span>
+                    </a>
+                    <a href="admin-ventas.html" class="nav-item active">
+                        <span class="nav-icon">💰</span>
+                        <span class="nav-text">Ventas</span>
+                    </a>
+                    <div class="nav-divider"></div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-text">Ir al Inicio</span>
+                    </a>
+                    <a href="#" class="nav-item" id="btn-logout-admin">
+                        <span class="nav-icon">🚪</span>
+                        <span class="nav-text">Cerrar Sesión</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="admin-main">
+                <header class="admin-header">
+                    <h1>💰 Ventas y Facturación</h1>
+                    <button class="btn-primary" id="btn-nueva-venta">➕ Nueva Venta (POS)</button>
+                </header>
+
+                <!-- FILTERS -->
+                <div class="admin-section">
+                    <div class="search-bar">
+                        <input type="date" class="search-input" id="filter-fecha-inicio" style="max-width: 200px;">
+                        <input type="date" class="search-input" id="filter-fecha-fin" style="max-width: 200px;">
+                        <select class="search-input" id="filter-estado" style="max-width: 180px;">
+                            <option value="">Todos los estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Completado">Completado</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                        <button class="btn-success" id="btn-reportes">📊 Generar Reporte</button>
+                    </div>
+                </div>
+
+                <!-- SALES TABLE -->
+                <div class="admin-section">
+                    <div class="table-container">
+                        <table class="admin-table" id="ventas-table">
+                            <thead>
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Productos</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px;">
+                                        <div class="spinner"></div>
+                                        <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando ventas...
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SALES STATS -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">💵
+                        </div>
+                        <div class="stat-info">
+                            <h3>Ventas Hoy</h3>
+                            <p class="stat-value" id="stat-ventas-hoy-total">-</p>
+                            <span class="stat-label">Bs</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">📅
+                        </div>
+                        <div class="stat-info">
+                            <h3>Ventas del Mes</h3>
+                            <p class="stat-value" id="stat-ventas-mes-total">-</p>
+                            <span class="stat-label">Bs</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">🔝
+                        </div>
+                        <div class="stat-info">
+                            <h3>Producto Más Vendido</h3>
+                            <p class="stat-value" id="stat-top-producto" style="font-size: 1rem;">-</p>
+                            <span class="stat-label">Este mes</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL POS (NUEVA VENTA) -->
+    <div id="modal-pos" class="admin-modal">
+        <div class="admin-modal-content" style="max-width: 1000px;">
+            <div class="admin-modal-header">
+                <h2>🛒 Punto de Venta (POS)</h2>
+                <button class="btn-close" onclick="closeModal('modal-pos')">&times;</button>
+            </div>
+            <div class="admin-modal-body">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <!-- LEFT: Product Selection -->
+                    <div>
+                        <h3 style="color: white; margin-bottom: 15px;">Seleccionar Productos</h3>
+
+                        <div class="campo">
+                            <input type="text" class="search-input" id="pos-search-producto"
+                                placeholder="Buscar producto...">
+                        </div>
+
+                        <div id="pos-productos-list" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                                Escriba para buscar productos
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Cart -->
+                    <div>
+                        <h3 style="color: white; margin-bottom: 15px;">Carrito</h3>
+
+                        <div class="campo">
+                            <label for="pos-cliente">Cliente</label>
+                            <select id="pos-cliente" required>
+                                <option value="">Seleccionar cliente...</option>
+                            </select>
+                        </div>
+
+                        <div id="pos-cart-items" style="margin: 20px 0; max-height: 300px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                                Carrito vacío
+                            </div>
+                        </div>
+
+                        <div
+                            style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <div class="campo">
+                                <label for="pos-descuento">Descuento (%)</label>
+                                <input type="number" id="pos-descuento" min="0" max="100" value="0" step="0.1">
+                            </div>
+
+                            <div
+                                style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: rgba(255,255,255,0.7);">Subtotal:</span>
+                                    <strong id="pos-subtotal" style="color: white;">Bs 0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: rgba(255,255,255,0.7);">Descuento:</span>
+                                    <strong id="pos-descuento-monto" style="color: #f59e0b;">Bs 0.00</strong>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 1.2rem; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <span style="color: white; font-weight: 600;">TOTAL:</span>
+                                    <strong id="pos-total" style="color: #10b981;">Bs 0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn-success btn-block btn-large" id="btn-procesar-venta">
+                            ✓ Procesar Venta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE VENTA -->
+    <div id="modal-detalle" class="admin-modal">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h2>🧾 Detalle de Venta</h2>
+                <button class="btn-close" onclick="closeModal('modal-detalle')">&times;</button>
+            </div>
+            <div class="admin-modal-body" id="detalle-venta-content">
+                <div style="text-align: center; padding: 40px;">Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin-common.js"></script>
+    <script src="js/admin-ventas.js"></script>
+
+</body>
+
+</html>

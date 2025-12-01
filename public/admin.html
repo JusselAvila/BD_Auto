@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Avila's Tyre Company</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="admin-wrapper">
+            <!-- SIDEBAR -->
+            <aside class="admin-sidebar">
+                <div class="sidebar-header">
+                    <h2>🎛️ Admin Panel</h2>
+                    <p id="admin-name">Cargando...</p>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="admin.html" class="nav-item active">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="admin-productos.html" class="nav-item">
+                        <span class="nav-icon">📦</span>
+                        <span class="nav-text">Productos</span>
+                    </a>
+                    <a href="admin-clientes.html" class="nav-item">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Clientes</span>
+                    </a>
+                    <a href="admin-ventas.html" class="nav-item">
+                        <span class="nav-icon">💰</span>
+                        <span class="nav-text">Ventas</span>
+                    </a>
+                    <div class="nav-divider"></div>
+                    <a href="index.html" class="nav-item">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-text">Ir al Inicio</span>
+                    </a>
+                    <a href="#" class="nav-item" id="btn-logout-admin">
+                        <span class="nav-icon">🚪</span>
+                        <span class="nav-text">Cerrar Sesión</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="admin-main">
+                <header class="admin-header">
+                    <h1>📊 Dashboard</h1>
+                    <div class="header-date" id="current-date"></div>
+                </header>
+
+                <!-- STATS CARDS -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📦
+                        </div>
+                        <div class="stat-info">
+                            <h3>Productos</h3>
+                            <p class="stat-value" id="stat-productos">-</p>
+                            <span class="stat-label">Total en inventario</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">👥
+                        </div>
+                        <div class="stat-info">
+                            <h3>Clientes</h3>
+                            <p class="stat-value" id="stat-clientes">-</p>
+                            <span class="stat-label">Registrados</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">💰
+                        </div>
+                        <div class="stat-info">
+                            <h3>Ventas del Mes</h3>
+                            <p class="stat-value" id="stat-ventas-mes">-</p>
+                            <span class="stat-label">Bs</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">📈
+                        </div>
+                        <div class="stat-info">
+                            <h3>Ventas Hoy</h3>
+                            <p class="stat-value" id="stat-ventas-hoy">-</p>
+                            <span class="stat-label">Transacciones</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECENT ACTIVITY -->
+                <div class="admin-section">
+                    <h2>📋 Actividad Reciente</h2>
+                    <div class="activity-list" id="activity-list">
+                        <div class="activity-item">
+                            <div class="activity-icon">⏳</div>
+                            <div class="activity-content">
+                                <p>Cargando actividad reciente...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUICK ACTIONS -->
+                <div class="admin-section">
+                    <h2>⚡ Acciones Rápidas</h2>
+                    <div class="quick-actions">
+                        <a href="admin-productos.html" class="quick-action-btn">
+                            <span class="action-icon">➕</span>
+                            <span>Agregar Producto</span>
+                        </a>
+                        <a href="admin-clientes.html" class="quick-action-btn">
+                            <span class="action-icon">👤</span>
+                            <span>Nuevo Cliente</span>
+                        </a>
+                        <a href="admin-ventas.html" class="quick-action-btn">
+                            <span class="action-icon">💳</span>
+                            <span>Nueva Venta</span>
+                        </a>
+                        <a href="#" class="quick-action-btn" id="btn-reportes">
+                            <span class="action-icon">📊</span>
+                            <span>Ver Reportes</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- REPORTS SECTION -->
+                <div class="admin-section">
+                    <h2>📊 Productos con Stock Bajo</h2>
+                    <div class="table-container">
+                        <table class="admin-table" id="stock-bajo-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Código</th>
+                                    <th>Stock</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 20px;">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/admin-common.js"></script>
+    <script>
+        // Check authentication
+        checkAdminAuth();
+
+        // Load dashboard data
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Update every minute
+
+            await loadDashboardStats();
+            await loadRecentActivity();
+            await loadStockBajo();
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('es-BO', options);
+        }
+
+        async function loadDashboardStats() {
+            try {
+                // Simulated stats - replace with actual API calls
+                document.getElementById('stat-productos').textContent = '324';
+                document.getElementById('stat-clientes').textContent = '156';
+                document.getElementById('stat-ventas-mes').textContent = '125,430.00';
+                document.getElementById('stat-ventas-hoy').textContent = '8';
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
+        }
+
+        async function loadRecentActivity() {
+            try {
+                const response = await apiRequest('/admin/ventas?limit=5');
+                const ventas = await response.json();
+
+                const activityList = document.getElementById('activity-list');
+                if (ventas.length === 0) {
+                    activityList.innerHTML = '<div class="activity-item"><p>No hay actividad reciente</p></div>';
+                    return;
+                }
+
+                activityList.innerHTML = ventas.map(venta => `
+          <div class="activity-item">
+            <div class="activity-icon">💰</div>
+            <div class="activity-content">
+              <p><strong>Venta #${venta.NumeroFactura}</strong></p>
+              <p>Bs ${venta.TotalVentaBs.toFixed(2)} - ${new Date(venta.FechaVenta).toLocaleDateString('es-BO')}</p>
+            </div>
+            <div class="activity-status status-${venta.NombreEstado.toLowerCase()}">
+              ${venta.NombreEstado}
+            </div>
+          </div>
+        `).join('');
+            } catch (err) {
+                console.error('Error loading activity:', err);
+                document.getElementById('activity-list').innerHTML = '<div class="activity-item"><p>Error al cargar actividad</p></div>';
+            }
+        }
+
+        async function loadStockBajo() {
+            try {
+                const response = await apiRequest('/admin/reportes/stock-bajo');
+                const productos = await response.json();
+
+                const tbody = document.querySelector('#stock-bajo-table tbody');
+                if (productos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No hay productos con stock bajo</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = productos.slice(0, 10).map(p => `
+          <tr>
+            <td>${p.NombreProducto}</td>
+            <td>${p.CodigoProducto}</td>
+            <td><span class="badge badge-danger">${p.StockActual}</span></td>
+            <td>
+              <a href="admin-productos.html?id=${p.ProductoID}" class="btn-sm btn-primary">Editar</a>
+            </td>
+          </tr>
+        `).join('');
+            } catch (err) {
+                console.error('Error loading stock bajo:', err);
+                document.querySelector('#stock-bajo-table tbody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Error al cargar datos</td></tr>';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

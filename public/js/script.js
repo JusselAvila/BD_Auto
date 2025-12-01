@@ -29,7 +29,7 @@ function isAuthenticated() {
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
   const sessionId = getSessionId();
-  
+
   actualizarHeaderUI();
   await cargarMarcas();
   await cargarProductosDestacados();
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function actualizarHeaderUI() {
   const usuario = getUsuario();
   const headerActions = document.querySelector('.header-actions');
-  
+
   if (usuario) {
     headerActions.innerHTML = `
       <span class="user-name">¡Hola, ${usuario.nombre}! 👋</span>
@@ -54,18 +54,18 @@ function actualizarHeaderUI() {
       ${usuario.rolID === 1 ? '<button id="btn-admin" class="btn-login">⚙️ Admin</button>' : ''}
       <button id="btn-logout" class="btn-login">🚪 Cerrar Sesión</button>
     `;
-    
+
     const formContainer = document.querySelector('.form-container');
     if (formContainer) {
       formContainer.style.display = 'none';
     }
-    
+
     document.getElementById('btn-carrito').addEventListener('click', mostrarCarrito);
     document.getElementById('btn-mis-compras').addEventListener('click', () => {
       window.location.href = 'historial.html';
     });
     document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
-    
+
     if (usuario.rolID === 1) {
       document.getElementById('btn-admin').addEventListener('click', () => {
         window.location.href = 'admin.html';
@@ -77,7 +77,7 @@ function actualizarHeaderUI() {
       btnCarrito.addEventListener('click', mostrarCarrito);
     }
   }
-  
+
   cargarCarrito();
 }
 
@@ -94,10 +94,11 @@ async function cargarMarcas() {
   try {
     const response = await fetch(`${API_URL}/vehiculos/marcas`);
     const marcas = await response.json();
-    
+
+    console.log('📊 Marcas obtenidas:', marcas); // 👈 AGREGA ESTO
     const selectMarcas = document.getElementById('marcas');
     selectMarcas.innerHTML = '<option value="">Seleccione una marca</option>';
-    
+
     marcas.forEach(marca => {
       const option = document.createElement('option');
       option.value = marca.MarcaVehiculoID;
@@ -117,38 +118,38 @@ function configurarEventos() {
   const selectMarcas = document.getElementById('marcas');
   const selectModelos = document.getElementById('modelos');
   const selectVersiones = document.getElementById('versiones');
-  
+
   selectMarcas.addEventListener('change', async (e) => {
     const marcaID = e.target.value;
-    
+
     selectModelos.innerHTML = '<option value="">Seleccione un modelo</option>';
     selectModelos.disabled = !marcaID;
     selectVersiones.innerHTML = '<option value="">Seleccione un modelo primero</option>';
     selectVersiones.disabled = true;
-    
+
     document.getElementById('productos').innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>Seleccione un vehículo para ver productos compatibles</p></div></li>';
-    
+
     if (marcaID) {
       await cargarModelos(marcaID);
     }
   });
-  
+
   selectModelos.addEventListener('change', async (e) => {
     const modeloID = e.target.value;
-    
+
     selectVersiones.innerHTML = '<option value="">Seleccione una versión</option>';
     selectVersiones.disabled = !modeloID;
-    
+
     document.getElementById('productos').innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>Seleccione una versión para ver productos compatibles</p></div></li>';
-    
+
     if (modeloID) {
       await cargarVersiones(modeloID);
     }
   });
-  
+
   selectVersiones.addEventListener('change', async (e) => {
     const versionID = e.target.value;
-    
+
     if (versionID) {
       await cargarProductosCompatibles(versionID);
     } else {
@@ -164,10 +165,10 @@ async function cargarModelos(marcaID) {
   try {
     const response = await fetch(`${API_URL}/vehiculos/modelos/${marcaID}`);
     const modelos = await response.json();
-    
+
     const selectModelos = document.getElementById('modelos');
     selectModelos.innerHTML = '<option value="">Seleccione un modelo</option>';
-    
+
     modelos.forEach(modelo => {
       const option = document.createElement('option');
       option.value = modelo.ModeloVehiculoID;
@@ -187,10 +188,10 @@ async function cargarVersiones(modeloID) {
   try {
     const response = await fetch(`${API_URL}/vehiculos/versiones/${modeloID}`);
     const versiones = await response.json();
-    
+
     const selectVersiones = document.getElementById('versiones');
     selectVersiones.innerHTML = '<option value="">Seleccione una versión</option>';
-    
+
     versiones.forEach(version => {
       const option = document.createElement('option');
       option.value = version.VersionVehiculoID;
@@ -210,24 +211,24 @@ async function cargarProductosCompatibles(versionID) {
   try {
     const response = await fetch(`${API_URL}/productos/compatibles/${versionID}`);
     const productos = await response.json();
-    
+
     const listaProductos = document.getElementById('productos');
-    
+
     if (productos.length === 0) {
       listaProductos.innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>No hay productos compatibles disponibles para esta versión</p></div></li>';
       return;
     }
-    
+
     listaProductos.innerHTML = '';
-    
+
     productos.forEach(producto => {
       const li = document.createElement('li');
       li.className = 'producto-item';
-      
-      const medida = producto.Ancho && producto.Perfil && producto.DiametroRin 
-        ? `${producto.Ancho}/${producto.Perfil}R${producto.DiametroRin}` 
+
+      const medida = producto.Ancho && producto.Perfil && producto.DiametroRin
+        ? `${producto.Ancho}/${producto.Perfil}R${producto.DiametroRin}`
         : '';
-      
+
       li.innerHTML = `
         <div class="producto-info">
           ${producto.ImagenPrincipalURL ? `<img src="${producto.ImagenPrincipalURL}" alt="${producto.NombreProducto}" onerror="this.style.display='none'">` : ''}
@@ -265,15 +266,15 @@ async function cargarProductosDestacados() {
   try {
     const response = await fetch(`${API_URL}/productos/destacados`);
     const productos = await response.json();
-    
+
     if (productos.length === 0) return;
-    
+
     const section = document.getElementById('destacados-section');
     const lista = document.getElementById('productos-destacados');
-    
+
     section.style.display = 'block';
     lista.innerHTML = '';
-    
+
     productos.forEach(producto => {
       const li = document.createElement('li');
       li.className = 'producto-item';
@@ -310,7 +311,7 @@ async function cargarCarrito() {
     const sessionId = getSessionId();
     const response = await fetch(`${API_URL}/carrito/${sessionId}`);
     const carrito = await response.json();
-    
+
     actualizarContadorCarrito(carrito.items.length);
   } catch (err) {
     console.error('Error cargando carrito:', err);
@@ -332,12 +333,12 @@ async function agregarAlCarrito(productoID, nombre, precio) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productoID, cantidad: 1 })
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error);
     }
-    
+
     const carrito = await response.json();
     actualizarContadorCarrito(carrito.items.length);
     mostrarMensaje('✅ Producto agregado al carrito', 'success');
@@ -370,9 +371,9 @@ function mostrarMensaje(mensaje, tipo = 'info') {
     z-index: 10000;
     animation: slideIn 0.3s ease-in-out;
   `;
-  
+
   document.body.appendChild(mensajeDiv);
-  
+
   setTimeout(() => {
     mensajeDiv.style.animation = 'slideOut 0.3s ease-in-out';
     setTimeout(() => mensajeDiv.remove(), 300);

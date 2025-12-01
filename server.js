@@ -63,7 +63,7 @@ async function connectDatabases() {
   try {
     sqlPool = await sql.connect(sqlConfig);
     console.log('✅ Conectado a SQL Server');
-    
+
     await mongoose.connect(mongoURI);
     console.log('✅ Conectado a MongoDB');
   } catch (err) {
@@ -78,14 +78,14 @@ async function connectDatabases() {
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({ error: 'Token no proporcionado' });
   }
-  
+
   try {
     const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
-    
+
     const result = await sqlPool.request()
       .input('UsuarioID', sql.Int, decoded.usuarioID)
       .query(`
@@ -95,11 +95,11 @@ async function authenticateToken(req, res, next) {
         LEFT JOIN Clientes c ON u.UsuarioID = c.UsuarioID
         WHERE u.UsuarioID = @UsuarioID AND u.Activo = 1
       `);
-    
+
     if (result.recordset.length === 0) {
       return res.status(403).json({ error: 'Token inválido' });
     }
-    
+
     req.user = result.recordset[0];
     next();
   } catch (err) {
@@ -122,13 +122,13 @@ function requireAdmin(req, res, next) {
 app.post('/api/registro/persona', async (req, res) => {
   try {
     const { email, password, nombres, apellidoPaterno, apellidoMaterno, ci, telefono, fechaNacimiento } = req.body;
-    
+
     if (!email || !password || !nombres || !apellidoPaterno || !ci) {
       return res.status(400).json({ error: 'Campos requeridos faltantes' });
     }
-    
+
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     const result = await sqlPool.request()
       .input('Email', sql.NVarChar(100), email)
       .input('PasswordHash', sql.NVarChar(255), passwordHash)
@@ -139,11 +139,11 @@ app.post('/api/registro/persona', async (req, res) => {
       .input('Telefono', sql.NVarChar(20), telefono || null)
       .input('FechaNacimiento', sql.Date, fechaNacimiento || null)
       .execute('sp_RegistrarUsuarioPersona');
-    
+
     const { UsuarioID, ClienteID } = result.recordset[0];
-    
-    res.status(201).json({ 
-      success: true, 
+
+    res.status(201).json({
+      success: true,
       message: 'Usuario registrado exitosamente',
       usuarioID: UsuarioID,
       clienteID: ClienteID
@@ -161,13 +161,13 @@ app.post('/api/registro/persona', async (req, res) => {
 app.post('/api/registro/empresa', async (req, res) => {
   try {
     const { email, password, razonSocial, nombreComercial, nit, telefono } = req.body;
-    
+
     if (!email || !password || !razonSocial || !nit) {
       return res.status(400).json({ error: 'Campos requeridos faltantes' });
     }
-    
+
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     const result = await sqlPool.request()
       .input('Email', sql.NVarChar(100), email)
       .input('PasswordHash', sql.NVarChar(255), passwordHash)
@@ -176,11 +176,11 @@ app.post('/api/registro/empresa', async (req, res) => {
       .input('NIT', sql.NVarChar(20), nit)
       .input('Telefono', sql.NVarChar(20), telefono || null)
       .execute('sp_RegistrarUsuarioEmpresa');
-    
+
     const { UsuarioID, ClienteID } = result.recordset[0];
-    
-    res.status(201).json({ 
-      success: true, 
+
+    res.status(201).json({
+      success: true,
       message: 'Empresa registrada exitosamente',
       usuarioID: UsuarioID,
       clienteID: ClienteID
@@ -198,11 +198,11 @@ app.post('/api/registro/empresa', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
-    
+
     const result = await sqlPool.request()
       .input('Email', sql.NVarChar(100), email)
       .query(`
@@ -225,23 +225,23 @@ app.post('/api/login', async (req, res) => {
         LEFT JOIN Empresas e ON c.ClienteID = e.ClienteID AND c.TipoCliente = 'Empresa'
         WHERE u.Email = @Email AND u.Activo = 1
       `);
-    
+
     if (result.recordset.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
-    
+
     const usuario = result.recordset[0];
     const isValidPassword = await bcrypt.compare(password, usuario.PasswordHash);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
-    
-    const token = Buffer.from(JSON.stringify({ 
+
+    const token = Buffer.from(JSON.stringify({
       usuarioID: usuario.UsuarioID,
       timestamp: Date.now()
     })).toString('base64');
-    
+
     res.json({
       success: true,
       token,
@@ -298,10 +298,12 @@ app.get('/api/ciudades/:departamentoID', async (req, res) => {
 app.get('/api/vehiculos/marcas', async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .query('SELECT MarcaVehiculoID, Nombre FROM Vehiculo_Marcas ORDER BY Nombre');
+      .execute('sp_ObtenerMarcasVehiculos'); // ✅ Nombre correcto
+
+    console.log('Marcas obtenidas:', result.recordset); // 👈 Agrega esto
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error obteniendo marcas:', err);
+    console.error('Error:', err);
     res.status(500).json({ error: 'Error al obtener marcas' });
   }
 });
@@ -310,8 +312,8 @@ app.get('/api/vehiculos/marcas', async (req, res) => {
 app.get('/api/vehiculos/modelos/:marcaID', async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .input('MarcaID', sql.Int, req.params.marcaID)
-      .query('SELECT ModeloVehiculoID, NombreModelo FROM Vehiculo_Modelos WHERE MarcaVehiculoID = @MarcaID ORDER BY NombreModelo');
+      .input('MarcaVehiculoID', sql.Int, req.params.marcaID)
+      .execute('sp_ObtenerModelosVehiculo');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo modelos:', err);
@@ -324,7 +326,7 @@ app.get('/api/vehiculos/versiones/:modeloID', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ModeloID', sql.Int, req.params.modeloID)
-      .query('SELECT VersionVehiculoID, NombreVersion, Anio FROM Vehiculo_Versiones WHERE ModeloVehiculoID = @ModeloID ORDER BY Anio DESC, NombreVersion');
+      .query('sp_ObtenerAniosVehiculo');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo versiones:', err);
@@ -408,15 +410,15 @@ app.get('/api/productos/destacados', async (req, res) => {
 app.get('/api/carrito/:sessionId', async (req, res) => {
   try {
     let carrito = await CarritoTemporal.findOne({ sessionId: req.params.sessionId });
-    
+
     if (!carrito) {
-      carrito = await CarritoTemporal.create({ 
-        sessionId: req.params.sessionId, 
-        items: [], 
-        total: 0 
+      carrito = await CarritoTemporal.create({
+        sessionId: req.params.sessionId,
+        items: [],
+        total: 0
       });
     }
-    
+
     res.json(carrito);
   } catch (err) {
     console.error('Error obteniendo carrito:', err);
@@ -427,33 +429,33 @@ app.get('/api/carrito/:sessionId', async (req, res) => {
 app.post('/api/carrito/:sessionId/agregar', async (req, res) => {
   try {
     const { productoID, cantidad } = req.body;
-    
+
     if (!productoID || !cantidad || cantidad < 1) {
       return res.status(400).json({ error: 'Datos inválidos' });
     }
-    
+
     const productoResult = await sqlPool.request()
       .input('ProductoID', sql.Int, productoID)
       .query('SELECT ProductoID, NombreProducto, PrecioVentaBs, StockActual FROM Productos WHERE ProductoID = @ProductoID AND Activo = 1');
-    
+
     if (productoResult.recordset.length === 0) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
-    
+
     const producto = productoResult.recordset[0];
-    
+
     if (producto.StockActual < cantidad) {
       return res.status(400).json({ error: 'Stock insuficiente' });
     }
-    
+
     let carrito = await CarritoTemporal.findOne({ sessionId: req.params.sessionId });
-    
+
     if (!carrito) {
       carrito = new CarritoTemporal({ sessionId: req.params.sessionId, items: [] });
     }
-    
+
     const itemIndex = carrito.items.findIndex(item => item.productoID === productoID);
-    
+
     if (itemIndex > -1) {
       carrito.items[itemIndex].cantidad += cantidad;
       carrito.items[itemIndex].subtotal = carrito.items[itemIndex].cantidad * carrito.items[itemIndex].precio;
@@ -466,10 +468,10 @@ app.post('/api/carrito/:sessionId/agregar', async (req, res) => {
         subtotal: producto.PrecioVentaBs * cantidad
       });
     }
-    
+
     carrito.total = carrito.items.reduce((sum, item) => sum + item.subtotal, 0);
     await carrito.save();
-    
+
     res.json(carrito);
   } catch (err) {
     console.error('Error agregando al carrito:', err);
@@ -480,27 +482,27 @@ app.post('/api/carrito/:sessionId/agregar', async (req, res) => {
 app.put('/api/carrito/:sessionId/actualizar', async (req, res) => {
   try {
     const { productoID, cantidad } = req.body;
-    
+
     const carrito = await CarritoTemporal.findOne({ sessionId: req.params.sessionId });
-    
+
     if (!carrito) {
       return res.status(404).json({ error: 'Carrito no encontrado' });
     }
-    
+
     if (cantidad === 0) {
       carrito.items = carrito.items.filter(item => item.productoID !== productoID);
     } else {
       const itemIndex = carrito.items.findIndex(item => item.productoID === productoID);
-      
+
       if (itemIndex > -1) {
         carrito.items[itemIndex].cantidad = cantidad;
         carrito.items[itemIndex].subtotal = carrito.items[itemIndex].cantidad * carrito.items[itemIndex].precio;
       }
     }
-    
+
     carrito.total = carrito.items.reduce((sum, item) => sum + item.subtotal, 0);
     await carrito.save();
-    
+
     res.json(carrito);
   } catch (err) {
     console.error('Error actualizando carrito:', err);
@@ -515,7 +517,7 @@ app.delete('/api/carrito/:sessionId', async (req, res) => {
       { items: [], total: 0 },
       { new: true, upsert: true }
     );
-    
+
     res.json({ success: true, message: 'Carrito vaciado' });
   } catch (err) {
     console.error('Error vaciando carrito:', err);
@@ -548,7 +550,7 @@ app.get('/api/direcciones', authenticateToken, async (req, res) => {
         WHERE d.ClienteID = @ClienteID AND d.Activo = 1
         ORDER BY d.EsPrincipal DESC, d.NombreDireccion
       `);
-    
+
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo direcciones:', err);
@@ -559,7 +561,7 @@ app.get('/api/direcciones', authenticateToken, async (req, res) => {
 app.post('/api/direcciones', authenticateToken, async (req, res) => {
   try {
     const { nombreDireccion, calle, zona, ciudadID, referencia, esPrincipal } = req.body;
-    
+
     const result = await sqlPool.request()
       .input('ClienteID', sql.Int, req.user.ClienteID)
       .input('NombreDireccion', sql.NVarChar(50), nombreDireccion)
@@ -569,10 +571,10 @@ app.post('/api/direcciones', authenticateToken, async (req, res) => {
       .input('Referencia', sql.NVarChar(255), referencia || null)
       .input('EsPrincipal', sql.Bit, esPrincipal || 0)
       .execute('sp_AgregarDireccion');
-    
-    res.status(201).json({ 
-      success: true, 
-      direccionID: result.recordset[0].DireccionID 
+
+    res.status(201).json({
+      success: true,
+      direccionID: result.recordset[0].DireccionID
     });
   } catch (err) {
     console.error('Error agregando dirección:', err);
@@ -590,20 +592,20 @@ app.post('/api/direcciones', authenticateToken, async (req, res) => {
 app.post('/api/ventas', authenticateToken, async (req, res) => {
   try {
     const { direccionEnvioID, metodoPagoID, cuponID, observaciones, sessionId } = req.body;
-    
+
     const carrito = await CarritoTemporal.findOne({ sessionId });
-    
+
     if (!carrito || carrito.items.length === 0) {
       return res.status(400).json({ error: 'El carrito está vacío' });
     }
-    
+
     const detallesJSON = JSON.stringify(
       carrito.items.map(item => ({
         ProductoID: item.productoID,
         Cantidad: item.cantidad
       }))
     );
-    
+
     const result = await sqlPool.request()
       .input('ClienteID', sql.Int, req.user.ClienteID)
       .input('DireccionEnvioID', sql.Int, direccionEnvioID)
@@ -613,14 +615,14 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
       .input('DetallesJSON', sql.NVarChar(sql.MAX), detallesJSON)
       .input('UsuarioID', sql.Int, req.user.UsuarioID)
       .execute('sp_CrearVenta');
-    
+
     const venta = result.recordset[0];
-    
+
     await CarritoTemporal.findOneAndUpdate(
       { sessionId },
       { items: [], total: 0 }
     );
-    
+
     res.status(201).json({
       success: true,
       venta: {
@@ -659,7 +661,7 @@ app.get('/api/ventas/historial', authenticateToken, async (req, res) => {
         GROUP BY v.VentaID, v.NumeroFactura, v.FechaVenta, v.TotalVentaBs, ep.NombreEstado, mp.NombreMetodo
         ORDER BY v.FechaVenta DESC
       `);
-    
+
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo historial:', err);
@@ -685,11 +687,11 @@ app.get('/api/ventas/:ventaID', authenticateToken, async (req, res) => {
         INNER JOIN Ciudades c ON d.CiudadID = c.CiudadID
         WHERE v.VentaID = @VentaID AND v.ClienteID = @ClienteID
       `);
-    
+
     if (ventaResult.recordset.length === 0) {
       return res.status(404).json({ error: 'Venta no encontrada' });
     }
-    
+
     const detalleResult = await sqlPool.request()
       .input('VentaID', sql.Int, req.params.ventaID)
       .query(`
@@ -701,7 +703,7 @@ app.get('/api/ventas/:ventaID', authenticateToken, async (req, res) => {
         INNER JOIN Productos p ON dv.ProductoID = p.ProductoID
         WHERE dv.VentaID = @VentaID
       `);
-    
+
     res.json({
       venta: ventaResult.recordset[0],
       detalles: detalleResult.recordset

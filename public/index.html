@@ -10,82 +10,117 @@
 
 <body>
 
-  <header>
-    <h1>🚗 Avila's Tyre Company</h1>
-    <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
-    <div class="header-actions">
-      <button id="btn-carrito" class="btn-login">
-        🛒 Carrito <span id="cart-count" class="cart-count">0</span>
-      </button>
-      <a href="login.html" class="btn-login">Iniciar Sesión</a>
-    </div>
-  </header>
+  <div class="container">
+    <header>
+      <div>
+        <h1>🚗 Avila's Tyre Company</h1>
+        <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
+      </div>
+      <div class="header-actions">
+        <button id="btn-carrito" class="btn-login">
+          🛒 Carrito
+          <span id="cart-count" class="cart-count">0</span>
+        </button>
+        <a href="admin.html" class="btn-login">👤 Admin</a>
+        <a href="login.html" class="btn-primary">Iniciar Sesión</a>
+      </div>
+    </header>
 
-  <div class="filtros">
-    <h3 style="grid-column: 1/-1; text-align: center; color: #333;">Encuentra las llantas perfectas para tu vehículo</h3>
-    
-    <div class="campo">
-      <label for="marcas">🚙 Marca del Vehículo</label>
-      <select id="marcas">
-        <option value="">Cargando marcas...</option>
-      </select>
+    <div class="filtros">
+      <h3 style="grid-column: 1/-1;">Encuentra las llantas perfectas para tu vehículo</h3>
+
+      <div class="campo">
+        <label for="marcas">🚙 Marca del Vehículo</label>
+        <select id="marcas">
+          <option value="">Cargando marcas...</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="modelos">🚗 Modelo</label>
+        <select id="modelos" disabled>
+          <option value="">Seleccione una marca primero</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="versiones">📋 Versión / Año</label>
+        <select id="versiones" disabled>
+          <option value="">Seleccione un modelo primero</option>
+        </select>
+      </div>
     </div>
 
-    <div class="campo">
-      <label for="modelos">🚗 Modelo</label>
-      <select id="modelos" disabled>
-        <option value="">Seleccione una marca primero</option>
-      </select>
+    <section class="productos-section">
+      <h2>Productos Disponibles</h2>
+      <ul id="productos">
+        <li class="empty-message">
+          <p>👆 Seleccione un vehículo para ver productos compatibles</p>
+          <p>O vea nuestros productos destacados abajo</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="productos-section" id="destacados-section" style="display: none;">
+      <h2>🌟 Productos Destacados</h2>
+      <ul id="productos-destacados"></ul>
+    </section>
+
+    <div class="form-container">
+      <div class="card">
+        <h2>¿No tienes cuenta?</h2>
+        <p class="texto-centrado" style="margin-bottom: 1.5rem;">
+          Regístrate para acceder a todas las funcionalidades y guardar tus direcciones de entrega
+        </p>
+
+        <a href="registro-persona.html" class="btn-primary btn-block" style="margin-bottom: 10px; text-align: center;">
+          👤 Registrar Persona
+        </a>
+
+        <a href="registro-empresa.html" class="btn-primary btn-block" style="text-align: center;">
+          🏢 Registrar Empresa
+        </a>
+      </div>
     </div>
 
-    <div class="campo">
-      <label for="versiones">📋 Versión / Año</label>
-      <select id="versiones" disabled>
-        <option value="">Seleccione un modelo primero</option>
-      </select>
-    </div>
+    <footer
+      style="background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); color: white; text-align: center; padding: 30px; margin-top: 40px; border-radius: 20px;">
+      <p style="font-size: 1.1rem; margin-bottom: 10px;">📍 Santa Cruz de la Sierra, Bolivia</p>
+      <p style="font-size: 1.1rem; margin-bottom: 10px;">📞 Contacto: +591 77780497</p>
+      <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">© 2024 Avila's Tyre Company - Todos los derechos
+        reservados</p>
+    </footer>
   </div>
 
-  <section class="productos-section">
-    <h2>Productos Disponibles</h2>
-    <ul id="productos">
-      <li class="empty-message">
-        <div style="text-align: center; padding: 40px;">
-          <p style="font-size: 1.2rem; color: #666;">👆 Seleccione un vehículo para ver productos compatibles</p>
-          <p style="color: #999; margin-top: 10px;">O vea nuestros productos destacados abajo</p>
+  <!-- MODAL DEL CARRITO -->
+  <div id="modal-carrito" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🛒 Mi Carrito de Compras</h2>
+        <button class="btn-close" id="btn-cerrar-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="carrito-items" class="carrito-items">
+          <div class="cart-empty">
+            <p>Tu carrito está vacío</p>
+            <p style="font-size: 0.9rem;">Agrega productos para comenzar</p>
+          </div>
         </div>
-      </li>
-    </ul>
-  </section>
 
-  <section class="productos-section" id="destacados-section" style="display: none;">
-    <h2>🌟 Productos Destacados</h2>
-    <ul id="productos-destacados">
-    </ul>
-  </section>
+        <div id="carrito-resumen" class="carrito-total" style="display: none;">
+          <h3>Total:</h3>
+          <div class="total-precio" id="carrito-total">Bs. 0.00</div>
+        </div>
 
-  <div class="form-container">
-    <div class="card">
-      <h2>¿No tienes cuenta?</h2>
-      <p class="texto-centrado" style="margin-bottom: 1.5rem;">
-        Regístrate para acceder a todas las funcionalidades y guardar tus direcciones de entrega
-      </p>
-
-      <a href="registro-persona.html" class="btn-primary" style="margin-bottom: 10px; display: block; text-align: center; text-decoration: none;">
-        👤 Registrar Persona
-      </a>
-
-      <a href="registro-empresa.html" class="btn-primary" style="display: block; text-align: center; text-decoration: none;">
-        🏢 Registrar Empresa
-      </a>
+        <div class="carrito-actions" id="carrito-acciones" style="display: none;">
+          <button class="btn-danger btn-block" id="btn-vaciar-carrito">🗑️ Vaciar Carrito</button>
+          <a href="carrito.html" class="btn-success btn-block" style="text-align: center;">
+            ✓ Finalizar Compra
+          </a>
+        </div>
+      </div>
     </div>
   </div>
-
-  <footer style="background: rgba(0,0,0,0.8); color: white; text-align: center; padding: 20px; margin-top: 40px;">
-    <p>📍 Santa Cruz de la Sierra, Bolivia</p>
-    <p>📞 Contacto: +591 3-123-4567</p>
-    <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">© 2024 Avila's Tyre Company - Todos los derechos reservados</p>
-  </footer>
 
   <script src="js/script.js"></script>
 

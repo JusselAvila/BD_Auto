@@ -194,7 +194,7 @@ GO
 
 select * from Vehiculo_Marcas
 
-CREATE PROCEDURE sp_ObtenerMarcasVehiculos
+ALTER PROCEDURE sp_ObtenerMarcasVehiculos
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -204,6 +204,7 @@ BEGIN
         vm.MarcaVehiculoID,
         vm.Nombre AS NombreMarca
     FROM Vehiculo_Marcas vm
+    -- Obliga a que exista la cadena completa de Modelos, Versiones, y Compatibilidad
     INNER JOIN Vehiculo_Modelos vmod ON vm.MarcaVehiculoID = vmod.MarcaVehiculoID
     INNER JOIN Vehiculo_Versiones vv ON vmod.ModeloVehiculoID = vv.ModeloVehiculoID
     INNER JOIN Llantas_Compatibilidad lc ON vv.VersionVehiculoID = lc.VersionVehiculoID
@@ -221,30 +222,22 @@ IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ObtenerModelosVehiculo'
     DROP PROCEDURE sp_ObtenerModelosVehiculo;
 GO
 
-CREATE PROCEDURE sp_ObtenerModelosVehiculo
-    @MarcaVehiculoID INT
+ALTER PROCEDURE sp_ObtenerMarcasVehiculos
 AS
 BEGIN
     SET NOCOUNT ON;
     SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
     
-    /*
-    RETORNA: Todos los modelos de una marca específica
-    que tienen versiones con compatibilidad de llantas
-    */
-    
     SELECT DISTINCT
-        vmod.ModeloVehiculoID,
-        vmod.NombreModelo
-    FROM Vehiculo_Modelos vmod
+        vm.MarcaVehiculoID,
+        vm.Nombre AS NombreMarca
+    FROM Vehiculo_Marcas vm
+    -- Obliga a que exista la cadena completa de Modelos, Versiones, y Compatibilidad
+    INNER JOIN Vehiculo_Modelos vmod ON vm.MarcaVehiculoID = vmod.MarcaVehiculoID
     INNER JOIN Vehiculo_Versiones vv ON vmod.ModeloVehiculoID = vv.ModeloVehiculoID
     INNER JOIN Llantas_Compatibilidad lc ON vv.VersionVehiculoID = lc.VersionVehiculoID
-    WHERE vmod.MarcaVehiculoID = @MarcaVehiculoID
-    ORDER BY vmod.NombreModelo ASC;
+    ORDER BY vm.Nombre ASC;
 END
-GO
-
-PRINT '✓ sp_ObtenerModelosVehiculo creado';
 GO
 
 -- =============================================
