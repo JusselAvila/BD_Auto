@@ -12,36 +12,77 @@ GO
 -- ROLES Y PERMISOS
 -- =============================================
 
--- Roles
-SET IDENTITY_INSERT Roles ON;
-INSERT INTO Roles (RolID, NombreRol, Descripcion) VALUES
-(1, 'Admin', 'Administrador con poder absoluto sobre el sistema'),
-(2, 'Cliente', 'Cliente regular del sistema'),
-(3, 'Vendedor', 'Personal de ventas'),
-(4, 'Almacenero', 'Encargado de inventario y stock');
-SET IDENTITY_INSERT Roles OFF;
-
--- Permisos
 SET IDENTITY_INSERT Permisos ON;
 INSERT INTO Permisos (PermisoID, NombrePermiso, CodigoInterno) VALUES
-(1, 'Ver Ventas', 'ventas.ver'),
-(2, 'Crear Ventas', 'ventas.crear'),
-(3, 'Gestionar Productos', 'productos.gestionar'),
-(4, 'Gestionar Usuarios', 'usuarios.gestionar'),
-(5, 'Ver Reportes', 'reportes.ver'),
-(6, 'Gestionar Inventario', 'inventario.gestionar');
+-- Permisos de CLIENTE
+(1, 'Ver Productos', 'productos.ver'),
+(2, 'Crear Ventas (Comprar)', 'ventas.crear'),
+(3, 'Ver Mis Ventas', 'mis_ventas.ver'),
+(4, 'Solicitar Devoluciones', 'devoluciones.crear'),
+(5, 'Ver Mis Devoluciones', 'mis_devoluciones.ver'),
+(6, 'Gestionar Mis Direcciones', 'mis_direcciones.gestionar'),
+(7, 'Actualizar Mi Perfil', 'mi_perfil.actualizar'),
+(8, 'Ver Cupones', 'cupones.ver'),
+
+-- Permisos EXCLUSIVOS de ADMIN
+(9, 'Gestionar Productos', 'productos.gestionar'),
+(10, 'Ver Todas Las Ventas', 'ventas.ver_todas'),
+(11, 'Gestionar Estados Ventas', 'ventas.gestionar_estados'),
+(12, 'Ver Todas Las Devoluciones', 'devoluciones.ver_todas'),
+(13, 'Gestionar Devoluciones', 'devoluciones.gestionar'),
+(14, 'Gestionar Compras', 'compras.gestionar'),
+(15, 'Gestionar Proveedores', 'proveedores.gestionar'),
+(16, 'Gestionar Promociones', 'promociones.gestionar'),
+(17, 'Gestionar Cupones', 'cupones.gestionar'),
+(18, 'Ver Clientes', 'clientes.ver'),
+(19, 'Gestionar Usuarios', 'usuarios.gestionar'),
+(20, 'Ver Reportes', 'reportes.ver'),
+(21, 'Ver Dashboard', 'dashboard.ver'),
+(22, 'Ver Auditoría', 'auditoria.ver');
 SET IDENTITY_INSERT Permisos OFF;
 
--- Asignar permisos a roles
+
+
+
 INSERT INTO RolPermisos (RolID, PermisoID) VALUES
--- Admin tiene todos los permisos
-(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
--- Cliente solo puede crear ventas
-(2, 2),
--- Vendedor puede ver y crear ventas
-(3, 1), (3, 2),
--- Almacenero gestiona inventario
-(4, 3), (4, 6);
+-- ============================================================================
+-- ADMIN tiene TODOS los permisos (22 permisos)
+-- ============================================================================
+(1, 1),  -- Ver Productos
+(1, 2),  -- Crear Ventas
+(1, 3),  -- Ver Mis Ventas
+(1, 4),  -- Solicitar Devoluciones
+(1, 5),  -- Ver Mis Devoluciones
+(1, 6),  -- Gestionar Mis Direcciones
+(1, 7),  -- Actualizar Mi Perfil
+(1, 8),  -- Ver Cupones
+(1, 9),  -- Gestionar Productos
+(1, 10), -- Ver Todas Las Ventas
+(1, 11), -- Gestionar Estados Ventas
+(1, 12), -- Ver Todas Las Devoluciones
+(1, 13), -- Gestionar Devoluciones
+(1, 14), -- Gestionar Compras
+(1, 15), -- Gestionar Proveedores
+(1, 16), -- Gestionar Promociones
+(1, 17), -- Gestionar Cupones
+(1, 18), -- Ver Clientes
+(1, 19), -- Gestionar Usuarios
+(1, 20), -- Ver Reportes
+(1, 21), -- Ver Dashboard
+(1, 22), -- Ver Auditoría
+
+-- ============================================================================
+-- CLIENTE tiene permisos específicos (8 permisos)
+-- ============================================================================
+(2, 1),  -- Ver Productos (catálogo)
+(2, 2),  -- Crear Ventas (comprar / agregar al carrito)
+(2, 3),  -- Ver Mis Ventas (historial de compras)
+(2, 4),  -- Solicitar Devoluciones
+(2, 5),  -- Ver Mis Devoluciones
+(2, 6),  -- Gestionar Mis Direcciones (agregar/editar/eliminar)
+(2, 7),  -- Actualizar Mi Perfil (nombre, teléfono, email, contraseña)
+(2, 8); -- Ver Cupones (para aplicar en compras)
+
 
 -- =============================================
 -- GEOGRAFÍA DE BOLIVIA
@@ -297,6 +338,8 @@ SET IDENTITY_INSERT Productos OFF;
 PRINT 'Insertando compatibilidades...';
 GO
 
+select * from Llantas_Compatibilidad
+
 SET IDENTITY_INSERT Llantas_Compatibilidad ON;
 INSERT INTO Llantas_Compatibilidad (CompatibilidadID, ProductoID, VersionVehiculoID, Posicion, Observacion) VALUES
 -- Toyota Hilux (todas las versiones) - 265/70R16
@@ -443,3 +486,262 @@ PRINT '  Password: empresa123';
 PRINT '  NIT: 123456789';
 PRINT '================================================';
 GO
+
+------------------------------------------------------
+
+
+
+
+SET IDENTITY_INSERT Proveedores ON;
+INSERT INTO Proveedores (ProveedorID, NombreProveedor, NIT, Telefono, Email, Direccion, CiudadID, Activo) VALUES
+(1, 'Importadora Michelin Bolivia S.A.', '987654321', '33312345', 'ventas@michelinbolivia.com', 'Av. Cristo Redentor #2500, Zona Norte', 1, 1),
+(2, 'Distribuidora Bridgestone SCZ', '876543210', '33398765', 'contacto@bridgestonescz.com', 'Parque Industrial PI-6', 1, 1),
+(3, 'Importaciones Goodyear del Sur', '765432109', '33387654', 'info@goodyearsur.com', 'Av. Banzer Km 9', 1, 1),
+(4, 'Proveedor Nacional de Llantas', '654321098', '33376543', 'ventas@proveedornacional.com', 'Calle Warnes #234', 1, 1);
+SET IDENTITY_INSERT Proveedores OFF;
+
+-- =============================================
+-- COMPRAS A PROVEEDORES (EJEMPLOS)
+-- =============================================
+
+PRINT 'Insertando compras de ejemplo...';
+GO
+SET IDENTITY_INSERT Compras ON;
+INSERT INTO Compras (CompraID, NumeroCompra, ProveedorID, UsuarioID, TotalCompraBs, EstadoCompraID, Observaciones) VALUES
+(1, 'COMP-2024-001', 1, 1, 42500.00, 4, 'Compra de 50 llantas BFGoodrich - Recibida OK'),
+(2, 'COMP-2024-002', 2, 1, 31500.00, 4, 'Compra de llantas Bridgestone - Recibida completa'),
+(3, 'COMP-2024-003', 3, 1, 20000.00, 3, 'Compra de llantas Goodyear - En tránsito, llegada 05/12');
+SET IDENTITY_INSERT Compras OFF;
+
+-- Detalles de Compras
+SET IDENTITY_INSERT DetalleCompras ON;
+INSERT INTO DetalleCompras (DetalleCompraID, CompraID, ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs) VALUES
+-- Compra 1: BFGoodrich (50 unidades)
+(1, 1, 1, 50, 850.00, 42500.00),
+
+-- Compra 2: Bridgestone (30 + 12 unidades)
+(2, 2, 2, 30, 750.00, 22500.00),
+(3, 2, 6, 12, 750.00, 9000.00),
+
+-- Compra 3: Goodyear (50 unidades) - En tránsito
+(4, 3, 4, 50, 400.00, 20000.00);
+SET IDENTITY_INSERT DetalleCompras OFF;
+
+-- Historial de estados de compra
+SET IDENTITY_INSERT HistorialEstadoCompra ON;
+INSERT INTO HistorialEstadoCompra (HistorialID, CompraID, EstadoID, UsuarioID, Comentario) VALUES
+-- Compra 1
+(1, 1, 1, 1, 'Compra solicitada a Michelin Bolivia'),
+(2, 1, 2, 1, 'Proveedor confirmó la orden'),
+(3, 1, 3, 1, 'Productos despachados desde La Paz'),
+(4, 1, 4, 1, 'Productos recibidos y verificados - Todo OK'),
+
+-- Compra 2
+(5, 2, 1, 1, 'Compra solicitada a Bridgestone'),
+(6, 2, 2, 1, 'Confirmada por proveedor'),
+(7, 2, 3, 1, 'En camino desde el almacén'),
+(8, 2, 4, 1, 'Recibida completa'),
+
+-- Compra 3
+(9, 3, 1, 1, 'Orden enviada a Goodyear'),
+(10, 3, 2, 1, 'Confirmada - Llegada estimada 05/12'),
+(11, 3, 3, 1, 'Productos en tránsito');
+SET IDENTITY_INSERT HistorialEstadoCompra OFF;
+
+-- =============================================
+-- VENTAS DE EJEMPLO
+-- =============================================
+
+PRINT 'Insertando ventas de ejemplo...';
+GO
+
+select * from Proveedores
+
+-- AGREGAR ESTO DESPUÉS DE LAS DIRECCIONES DE CARLOS (LÍNEA 147)
+SET IDENTITY_INSERT Direcciones ON;
+INSERT INTO Direcciones (DireccionID, ClienteID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal, Activo) VALUES
+(3, 2, 'Oficina Principal', 'Av. Tres Pasos al Frente #890', 'Parque Industrial', 1, 'Galpón 5, Parque Industrial', 1, 1);
+SET IDENTITY_INSERT Direcciones OFF;
+
+-- =============================================
+-- COMPRAS A PROVEEDORES
+-- =============================================
+
+PRINT 'Insertando compras de ejemplo...';
+GO
+
+SET IDENTITY_INSERT Compras ON;
+INSERT INTO Compras (CompraID, NumeroCompra, ProveedorID, UsuarioID, TotalCompraBs, EstadoCompraID, Observaciones) VALUES
+(1, 'COMP-2024-001', 1, 1, 42500.00, 4, 'Compra de 50 llantas BFGoodrich - Recibida OK'),
+(2, 'COMP-2024-002', 2, 1, 31500.00, 4, 'Compra de llantas Bridgestone - Recibida completa'),
+(3, 'COMP-2024-003', 3, 1, 20000.00, 3, 'Compra de llantas Goodyear - En tránsito, llegada 05/12');
+SET IDENTITY_INSERT Compras OFF;
+
+-- Detalles de Compras
+SET IDENTITY_INSERT DetalleCompras ON;
+INSERT INTO DetalleCompras (DetalleCompraID, CompraID, ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs) VALUES
+-- Compra 1: BFGoodrich (50 unidades)
+(1, 1, 1, 50, 850.00, 42500.00),
+
+-- Compra 2: Bridgestone (30 + 12 unidades)
+(2, 2, 2, 30, 750.00, 22500.00),
+(3, 2, 6, 12, 750.00, 9000.00),
+
+-- Compra 3: Goodyear (50 unidades) - En tránsito
+(4, 3, 4, 50, 400.00, 20000.00);
+SET IDENTITY_INSERT DetalleCompras OFF;
+
+-- Historial de estados de compra
+SET IDENTITY_INSERT HistorialEstadoCompra ON;
+INSERT INTO HistorialEstadoCompra (HistorialID, CompraID, EstadoID, UsuarioID, Comentario) VALUES
+-- Compra 1
+(1, 1, 1, 1, 'Compra solicitada a Michelin Bolivia'),
+(2, 1, 2, 1, 'Proveedor confirmó la orden'),
+(3, 1, 3, 1, 'Productos despachados desde La Paz'),
+(4, 1, 4, 1, 'Productos recibidos y verificados - Todo OK'),
+
+-- Compra 2
+(5, 2, 1, 1, 'Compra solicitada a Bridgestone'),
+(6, 2, 2, 1, 'Confirmada por proveedor'),
+(7, 2, 3, 1, 'En camino desde el almacén'),
+(8, 2, 4, 1, 'Recibida completa'),
+
+-- Compra 3
+(9, 3, 1, 1, 'Orden enviada a Goodyear'),
+(10, 3, 2, 1, 'Confirmada - Llegada estimada 05/12'),
+(11, 3, 3, 1, 'Productos en tránsito');
+SET IDENTITY_INSERT HistorialEstadoCompra OFF;
+
+-- =============================================
+-- VENTAS DE EJEMPLO (CORREGIDO - DireccionEnvioID=3 para empresa)
+-- =============================================
+
+select * from DetalleVentas
+
+PRINT 'Insertando ventas de ejemplo...';
+GO
+
+SET IDENTITY_INSERT Ventas ON;
+INSERT INTO Ventas (VentaID, NumeroFactura, ClienteID, DireccionEnvioID, SubtotalVentaBs, DescuentoPromocionBs, DescuentoCuponBs, TotalVentaBs, MetodoPagoID, EstadoID, CuponID, Observaciones) VALUES
+-- Venta 1: Carlos compra 4 llantas BFGoodrich
+(1, 'SCZ-20241120-0001', 1, 1, 4800.00, 720.00, 50.00, 4030.00, 2, 5, 2, 'Cliente pagó con QR - Entrega en Equipetrol'),
+(2, 'SCZ-20241122-0001', 1, 1, 1500.00, 0.00, 0.00, 1500.00, 1, 5, NULL, 'Pago en efectivo - Entrega en oficina'),
+(3, 'SCZ-20241125-0001', 2, 2, 10000.00, 0.00, 0.00, 10000.00, 3, 4, NULL, 'Transferencia - Pedido grande para flota - Entrega en Parque Industrial'),
+(4, 'SCZ-20241128-0001', 1, 1, 1300.00, 195.00, 0.00, 1105.00, 2, 3, NULL, 'En preparación - Cliente pasará a recoger');
+SET IDENTITY_INSERT Ventas OFF;
+
+-- Detalles de Ventas
+SET IDENTITY_INSERT DetalleVentas ON;
+INSERT INTO DetalleVentas (DetalleVentaID, VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs) VALUES
+-- Venta 1: 4 BFGoodrich (con descuento 15%)
+(1, 1, 1, 4, 1200.00, 180.00, 4080.00),
+
+-- Venta 2: 2 Michelin Primacy
+(2, 2, 5, 2, 750.00, 0.00, 1500.00),
+
+-- Venta 3: 4 llantas de camión
+(3, 3, 7, 4, 2500.00, 0.00, 10000.00),
+
+-- Venta 4: 1 Michelin LTX (con descuento 15%)
+(4, 4, 3, 1, 1300.00, 195.00, 1105.00);
+SET IDENTITY_INSERT DetalleVentas OFF;
+
+select * from HistorialEstadoPedido
+
+-- Historial de estados de pedido
+SET IDENTITY_INSERT HistorialEstadoPedido ON;
+INSERT INTO HistorialEstadoPedido (HistorialID, VentaID, EstadoID, UsuarioID, Comentario) VALUES
+-- Venta 1 (completada)
+(1, 1, 1, 2, 'Venta creada por cliente'),
+(2, 1, 2, 1, 'Pago confirmado vía QR'),
+(3, 1, 3, 1, 'Productos preparados'),
+(4, 1, 4, 1, 'En camino a Equipetrol'),
+(5, 1, 5, 1, 'Entregado - Cliente firmó conforme'),
+
+-- Venta 2 (completada)
+(6, 2, 1, 2, 'Pedido creado'),
+(7, 2, 2, 1, 'Pago en efectivo recibido'),
+(8, 2, 3, 1, 'Listo para recoger'),
+(9, 2, 4, 1, 'Cliente pasó a recoger'),
+(10, 2, 5, 1, 'Entregado en oficina'),
+
+-- Venta 3 (en camino)
+(11, 3, 1, 3, 'Pedido corporativo'),
+(12, 3, 2, 1, 'Transferencia verificada'),
+(13, 3, 3, 1, 'Productos separados'),
+(14, 3, 4, 1, 'En ruta hacia empresa'),
+
+-- Venta 4 (en preparación)
+(15, 4, 1, 2, 'Venta online'),
+(16, 4, 2, 1, 'Pago QR confirmado'),
+(17, 4, 3, 1, 'Armando el pedido');
+SET IDENTITY_INSERT HistorialEstadoPedido OFF;
+
+-- =============================================
+-- MOVIMIENTOS DE STOCK (CORREGIDO - Cantidad=2 en vez de -2)
+-- =============================================
+
+PRINT 'Insertando movimientos de stock...';
+GO
+
+select * from MovimientosStock
+
+SET IDENTITY_INSERT MovimientosStock ON;
+INSERT INTO MovimientosStock (MovimientoID, ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones) VALUES
+-- Compra 1 recibida: +50 BFGoodrich
+(1, 1, 2, 50, 25, 75, 1, 'Compras', 1, 'Compra recibida de Michelin Bolivia'),
+
+-- Compra 2 recibida: +30 Bridgestone Dueler
+(2, 2, 2, 30, 30, 60, 1, 'Compras', 2, 'Compra recibida de Bridgestone SCZ'),
+
+-- Compra 2 recibida: +12 Bridgestone Turanza
+(3, 6, 2, 12, 45, 57, 1, 'Compras', 2, 'Compra recibida de Bridgestone SCZ'),
+
+-- Venta 1: -4 BFGoodrich
+(4, 1, 1, 4, 75, 71, 1, 'Ventas', 1, 'Venta a Carlos Mendoza'),
+
+-- Venta 2: -2 Michelin Primacy
+(5, 5, 1, 2, 35, 33, 1, 'Ventas', 2, 'Venta a Carlos Mendoza'),
+
+-- Venta 3: -4 Firestone camión
+(6, 7, 1, 4, 12, 8, 1, 'Ventas', 3, 'Venta a Transportes Cruz'),
+
+-- Venta 4: -1 Michelin LTX
+(7, 3, 1, 1, 20, 19, 1, 'Ventas', 4, 'Venta online'),
+
+-- Ajuste de inventario (CORREGIDO: Cantidad=2 en vez de -2)
+(8, 8, 4, 2, 10, 8, 1, NULL, NULL, 'Ajuste por conteo físico - 2 llantas dañadas'),
+
+-- Merma
+(9, 4, 5, 1, 40, 39, 1, NULL, NULL, 'Llanta con defecto de fábrica');
+SET IDENTITY_INSERT MovimientosStock OFF;
+
+-- =============================================
+-- DEVOLUCIONES (EJEMPLOS)
+-- =============================================
+
+PRINT 'Insertando devoluciones de ejemplo...';
+GO
+
+SET IDENTITY_INSERT Devoluciones ON;
+INSERT INTO Devoluciones (DevolucionID, VentaID, ClienteID, Motivo, EstadoID, TotalReembolsoBs, UsuarioAprobador) VALUES
+-- Cliente devuelve 1 llanta porque se equivocó de medida
+(1, 2, 1, 'Cliente ordenó medida incorrecta para su vehículo', 5, 750.00, 1);
+SET IDENTITY_INSERT Devoluciones OFF;
+
+SET IDENTITY_INSERT DetalleDevoluciones ON;
+INSERT INTO DetalleDevoluciones (DetalleDevolucionID, DevolucionID, ProductoID, CantidadDevuelta, PrecioUnitarioBs, SubtotalReembolsoBs, CondicionProducto) VALUES
+(1, 1, 5, 1, 750.00, 750.00, 'NUEVO');
+SET IDENTITY_INSERT DetalleDevoluciones OFF;
+
+SET IDENTITY_INSERT HistorialEstadoDevolucion ON;
+INSERT INTO HistorialEstadoDevolucion (HistorialDevolucionID, DevolucionID, EstadoID, UsuarioID, Comentario) VALUES
+(1, 1, 1, 2, 'Cliente solicita devolución - se equivocó de medida'),
+(2, 1, 2, 1, 'Producto recibido en almacén - revisando estado'),
+(3, 1, 3, 1, 'Devolución aprobada - producto en perfectas condiciones'),
+(4, 1, 5, 1, 'Reembolso procesado - Bs 750 devueltos al cliente');
+SET IDENTITY_INSERT HistorialEstadoDevolucion OFF;
+
+-- Movimiento de stock por devolución
+INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones)
+VALUES (5, 3, 1, 33, 34, 1, 'Devoluciones', 1, 'Devolución de cliente - producto en perfecto estado');
