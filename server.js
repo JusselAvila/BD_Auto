@@ -135,10 +135,10 @@ app.post('/api/registro/persona', async (req, res) => {
       .input('Nombres', sql.NVarChar(100), nombres)
       .input('ApellidoPaterno', sql.NVarChar(100), apellidoPaterno)
       .input('ApellidoMaterno', sql.NVarChar(100), apellidoMaterno || null)
-      .input('NumeroCI', sql.NVarChar(20), ci)
+      .input('CI', sql.NVarChar(20), ci)  // ⚠️ Cambiar a 'CI' (no 'NumeroCI')
       .input('Telefono', sql.NVarChar(20), telefono || null)
       .input('FechaNacimiento', sql.Date, fechaNacimiento || null)
-      .execute('sp_RegistrarUsuarioPersona');
+      .execute('sp_CrearClientePersona');
 
     const { UsuarioID, ClienteID } = result.recordset[0];
 
@@ -297,13 +297,14 @@ app.get('/api/ciudades/:departamentoID', async (req, res) => {
 // Obtener marcas de vehículos
 app.get('/api/vehiculos/marcas', async (req, res) => {
   try {
-    const result = await sqlPool.request()
-      .execute('sp_ObtenerMarcasVehiculos'); // ✅ Nombre correcto
+    console.log('🔍 Ejecutando sp_ObtenerMarcasVehiculos');
 
-    console.log('Marcas obtenidas:', result.recordset); // 👈 Agrega esto
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerMarcasVehiculos');
+
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error:', err);
+    console.error('❌ Error:', err);
     res.status(500).json({ error: 'Error al obtener marcas' });
   }
 });
@@ -326,7 +327,7 @@ app.get('/api/vehiculos/versiones/:modeloID', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ModeloID', sql.Int, req.params.modeloID)
-      .query('sp_ObtenerAniosVehiculo');
+      .query('SELECT VersionVehiculoID, NombreVersion, Anio FROM Vehiculo_Versiones WHERE ModeloVehiculoID = @ModeloID ORDER BY Anio DESC, NombreVersion');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo versiones:', err);
