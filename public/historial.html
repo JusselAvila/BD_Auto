@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Compras - Avila's Tyre Company</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <a href="index.html" style="text-decoration: none; color: inherit;">
+                    <h1>🚗 Avila's Tyre Company</h1>
+                </a>
+                <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
+            </div>
+            <div class="header-actions">
+                <a href="index.html" class="btn-login">🏠 Inicio</a>
+                <a href="perfil.html" class="btn-login">👤 Mi Perfil</a>
+            </div>
+        </header>
+
+        <main class="form-container">
+            <div class="card">
+                <h2>Historial de Compras</h2>
+                <p>Aquí puedes ver todas tus compras realizadas.</p>
+
+                <div id="historial-compras-container">
+                    <!-- Las compras se cargarán aquí dinámicamente -->
+                    <p>Cargando historial de compras...</p>
+                </div>
+            </div>
+        </main>
+
+        <footer
+            style="background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); color: white; text-align: center; padding: 30px; margin-top: 40px; border-radius: 20px;">
+            <p>© 2024 Avila's Tyre Company - Todos los derechos reservados</p>
+        </footer>
+    </div>
+
+    <script src="js/historial.js"></script>
+</body>
+
+</html>

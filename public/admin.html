@@ -190,13 +190,28 @@
 
         async function loadDashboardStats() {
             try {
-                // Simulated stats - replace with actual API calls
-                document.getElementById('stat-productos').textContent = '324';
-                document.getElementById('stat-clientes').textContent = '156';
-                document.getElementById('stat-ventas-mes').textContent = '125,430.00';
-                document.getElementById('stat-ventas-hoy').textContent = '8';
+                // Fetch Total Productos
+                const productosResponse = await apiRequest('/admin/stats/productos-total');
+                document.getElementById('stat-productos').textContent = productosResponse.TotalProductos;
+
+                // Fetch Total Clientes
+                const clientesResponse = await apiRequest('/admin/stats/clientes-total');
+                document.getElementById('stat-clientes').textContent = clientesResponse.TotalClientes;
+
+                // Fetch Ventas del Mes
+                const ventasMesResponse = await apiRequest('/admin/stats/ventas-mes');
+                document.getElementById('stat-ventas-mes').textContent = parseFloat(ventasMesResponse.TotalVentasMes).toFixed(2);
+
+                // Fetch Ventas Hoy (Transacciones)
+                const ventasHoyResponse = await apiRequest('/admin/stats/ventas-hoy');
+                document.getElementById('stat-ventas-hoy').textContent = ventasHoyResponse.TotalTransaccionesHoy;
+
             } catch (err) {
                 console.error('Error loading stats:', err);
+                document.getElementById('stat-productos').textContent = 'Error';
+                document.getElementById('stat-clientes').textContent = 'Error';
+                document.getElementById('stat-ventas-mes').textContent = 'Error';
+                document.getElementById('stat-ventas-hoy').textContent = 'Error';
             }
         }
 

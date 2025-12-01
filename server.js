@@ -142,11 +142,26 @@ app.post('/api/registro/persona', async (req, res) => {
 
     const { UsuarioID, ClienteID } = result.recordset[0];
 
+    const token = Buffer.from(JSON.stringify({
+      usuarioID: UsuarioID,
+      timestamp: Date.now()
+    })).toString('base64');
+    
+    const usuario = {
+        usuarioID: UsuarioID,
+        clienteID: ClienteID,
+        email: email,
+        nombre: `${nombres} ${apellidoPaterno}`,
+        rol: 'Cliente',
+        rolID: 2, // Assuming 2 is the RolID for Cliente
+        tipoCliente: 'Persona'
+    };
+
     res.status(201).json({
       success: true,
       message: 'Usuario registrado exitosamente',
-      usuarioID: UsuarioID,
-      clienteID: ClienteID
+      token,
+      usuario
     });
   } catch (err) {
     console.error('Error en registro persona:', err);
@@ -813,6 +828,47 @@ app.get('/api/ventas/:ventaID', authenticateToken, async (req, res) => {
 // =============================================
 // RUTAS DE ADMINISTRACIÓN
 // =============================================
+
+// Nuevos endpoints para estadísticas del dashboard
+app.get('/api/admin/stats/productos-total', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request().execute('sp_ContarProductosActivos');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo total de productos:', err);
+    res.status(500).json({ error: 'Error al obtener el total de productos.' });
+  }
+});
+
+app.get('/api/admin/stats/clientes-total', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request().execute('sp_ContarClientes');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo total de clientes:', err);
+    res.status(500).json({ error: 'Error al obtener el total de clientes.' });
+  }
+});
+
+app.get('/api/admin/stats/ventas-mes', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request().execute('sp_ObtenerVentasDelMes');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo ventas del mes:', err);
+    res.status(500).json({ error: 'Error al obtener las ventas del mes.' });
+  }
+});
+
+app.get('/api/admin/stats/ventas-hoy', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request().execute('SP_CantidadVentasHoy');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo transacciones de ventas de hoy:', err);
+    res.status(500).json({ error: 'Error al obtener las transacciones de ventas de hoy.' });
+  }
+});
 
 app.get('/api/admin/ventas', authenticateToken, requireAdmin, async (req, res) => {
   try {

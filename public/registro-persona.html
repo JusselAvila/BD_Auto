@@ -127,10 +127,17 @@
           throw new Error(resultado.error || 'Error en el registro');
         }
 
-        mostrarMensaje('✅ Registro exitoso. Redirigiendo al login...', 'success');
+        // Store token and user data
+        console.log('Resultado del registro (antes de almacenar):', resultado);
+        localStorage.setItem('authToken', resultado.token);
+        localStorage.setItem('usuario', JSON.stringify(resultado.usuario));
+        console.log('Token almacenado:', localStorage.getItem('authToken'));
+        console.log('Usuario almacenado:', localStorage.getItem('usuario'));
+
+        mostrarMensaje('✅ Registro exitoso. Iniciando sesión...', 'success');
         
         setTimeout(() => {
-          window.location.href = 'login.html';
+          window.location.href = 'index.html'; // Redirect to home page or profile
         }, 2000);
 
       } catch (err) {

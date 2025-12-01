@@ -68,7 +68,35 @@ const cambiarEstadoVenta = async (req, res) => {
     }
 };
 
+const getHistorialVentas = async (req, res) => {
+    try {
+        const { clienteId } = req.params;
+        const pool = await getConnection();
+        const result = await pool.request()
+            .input('ClienteID', sql.Int, clienteId)
+            .execute('sp_ObtenerHistorialVentasCliente');
+
+        // Parse the JSON details for each sale
+        const ventas = result.recordset.map(venta => ({
+            ...venta,
+            Detalles: JSON.parse(venta.Detalles)
+        }));
+
+        res.json({
+            success: true,
+            data: ventas
+        });
+    } catch (error) {
+        console.error('Error en getHistorialVentas:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error al obtener el historial de ventas'
+        });
+    }
+};
+
 module.exports = {
     crearVenta,
-    cambiarEstadoVenta
+    cambiarEstadoVenta,
+    getHistorialVentas
 };

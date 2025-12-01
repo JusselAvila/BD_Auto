@@ -68,14 +68,17 @@
         }
 
         // Guardar token y datos de usuario
+        console.log('Resultado del login (antes de almacenar):', resultado);
         localStorage.setItem('authToken', resultado.token);
         localStorage.setItem('usuario', JSON.stringify(resultado.usuario));
+        console.log('Token almacenado:', localStorage.getItem('authToken'));
+        console.log('Usuario almacenado:', localStorage.getItem('usuario'));
 
         mostrarMensaje('Inicio de sesión exitoso', 'success');
         
         setTimeout(() => {
           // Redirigir según el rol
-          if (resultado.usuario.idRol === 1) {
+          if (resultado.usuario.rolID === 1) {
             window.location.href = 'admin.html';
           } else {
             window.location.href = 'index.html';

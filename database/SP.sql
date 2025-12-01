@@ -1,4 +1,4 @@
-ÔªøCREATE PROCEDURE sp_CrearClientePersona
+CREATE PROCEDURE sp_CrearClientePersona
     @Email NVARCHAR(100),
     @PasswordHash NVARCHAR(255),
     @Nombres NVARCHAR(100),
@@ -14,15 +14,15 @@ BEGIN
     /*
     NIVEL DE AISLAMIENTO: SERIALIZABLE
     
-    JUSTIFICACI√ìN:
-    - Evita que dos transacciones simult√°neas creen clientes con el mismo email/CI
+    JUSTIFICACI”N:
+    - Evita que dos transacciones simult·neas creen clientes con el mismo email/CI
     - Sin SERIALIZABLE: 
-      * Transacci√≥n A verifica email no existe ‚úì
-      * Transacci√≥n B verifica email no existe ‚úì (mismo email)
-      * Ambas insertan ‚Üí Violaci√≥n de UNIQUE constraint
+      * TransacciÛn A verifica email no existe ?
+      * TransacciÛn B verifica email no existe ? (mismo email)
+      * Ambas insertan ? ViolaciÛn de UNIQUE constraint
     - Con SERIALIZABLE:
-      * Primera transacci√≥n bloquea hasta completar
-      * Segunda transacci√≥n espera y luego detecta duplicado
+      * Primera transacciÛn bloquea hasta completar
+      * Segunda transacciÛn espera y luego detecta duplicado
     */
     SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     
@@ -30,7 +30,7 @@ BEGIN
     DECLARE @MaxReintentos INT = 3;
     DECLARE @Exitoso BIT = 0;
     
-    -- MANEJO DE DEADLOCKS: Reintentos autom√°ticos
+    -- MANEJO DE DEADLOCKS: Reintentos autom·ticos
     WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
     BEGIN
         SET @Reintentos = @Reintentos + 1;
@@ -42,16 +42,16 @@ BEGIN
             DECLARE @ClienteID INT;
             DECLARE @RolClienteID INT;
             
-            -- Verificar email √∫nico (con bloqueo)
+            -- Verificar email ˙nico (con bloqueo)
             IF EXISTS (SELECT 1 FROM Usuarios WITH (UPDLOCK, HOLDLOCK) WHERE Email = @Email AND Activo = 1)
             BEGIN
-                RAISERROR('El email ya est√° registrado en el sistema', 16, 1);
+                RAISERROR('El email ya est· registrado en el sistema', 16, 1);
             END
             
-            -- Verificar CI √∫nico (con bloqueo)
+            -- Verificar CI ˙nico (con bloqueo)
             IF EXISTS (SELECT 1 FROM Clientes WITH (UPDLOCK, HOLDLOCK) WHERE NumeroDocumento = @CI)
             BEGIN
-                RAISERROR('El CI ya est√° registrado en el sistema', 16, 1);
+                RAISERROR('El CI ya est· registrado en el sistema', 16, 1);
             END
             
             -- Obtener RolID de Cliente
@@ -103,7 +103,7 @@ BEGIN
                 END
             END;
             
-            -- Otros errores o m√°ximo de reintentos alcanzado
+            -- Otros errores o m·ximo de reintentos alcanzado
             THROW;
         END CATCH
     END
@@ -140,11 +140,11 @@ BEGIN
         BEGIN
             SELECT 
                 0 AS Exito,
-                'Email o contrase√±a incorrectos' AS Mensaje;
+                'Email o contraseÒa incorrectos' AS Mensaje;
             RETURN;
         END
         
-        -- Validar que est√° activo
+        -- Validar que est· activo
         IF @Activo = 0
         BEGIN
             SELECT 
@@ -153,7 +153,7 @@ BEGIN
             RETURN;
         END
         
-        -- Obtener informaci√≥n de cliente (si es cliente)
+        -- Obtener informaciÛn de cliente (si es cliente)
         SELECT 
             @ClienteID = c.ClienteID,
             @TipoCliente = c.TipoCliente
@@ -213,7 +213,7 @@ BEGIN
 END
 GO
 
-PRINT '‚úì sp_ObtenerMarcasVehiculos creado';
+PRINT '? sp_ObtenerMarcasVehiculos creado';
 GO
 
 -- =============================================
@@ -242,7 +242,7 @@ END
 GO
 
 -- =============================================
--- SP 3: Obtener A√±os de un Modelo
+-- SP 3: Obtener AÒos de un Modelo
 -- =============================================
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ObtenerAniosVehiculo')
     DROP PROCEDURE sp_ObtenerAniosVehiculo;
@@ -256,7 +256,7 @@ BEGIN
     SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
     
     /*
-    RETORNA: Todos los a√±os disponibles para un modelo espec√≠fico
+    RETORNA: Todos los aÒos disponibles para un modelo especÌfico
     que tienen compatibilidad de llantas
     */
     
@@ -265,15 +265,15 @@ BEGIN
     FROM Vehiculo_Versiones vv
     INNER JOIN Llantas_Compatibilidad lc ON vv.VersionVehiculoID = lc.VersionVehiculoID
     WHERE vv.ModeloVehiculoID = @ModeloVehiculoID
-    ORDER BY vv.Anio DESC; -- A√±os m√°s recientes primero
+    ORDER BY vv.Anio DESC; -- AÒos m·s recientes primero
 END
 GO
 
-PRINT '‚úì sp_ObtenerAniosVehiculo creado';
+PRINT '? sp_ObtenerAniosVehiculo creado';
 GO
 
 -- =============================================
--- SP 4: Obtener Versiones de un Modelo y A√±o
+-- SP 4: Obtener Versiones de un Modelo y AÒo
 -- =============================================
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ObtenerVersionesVehiculo')
     DROP PROCEDURE sp_ObtenerVersionesVehiculo;
@@ -288,7 +288,7 @@ BEGIN
     SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
     
     /*
-    RETORNA: Todas las versiones de un modelo y a√±o espec√≠fico
+    RETORNA: Todas las versiones de un modelo y aÒo especÌfico
     que tienen compatibilidad de llantas
     */
     
@@ -304,11 +304,11 @@ BEGIN
 END
 GO
 
-PRINT '‚úì sp_ObtenerVersionesVehiculo creado';
+PRINT '? sp_ObtenerVersionesVehiculo creado';
 GO
 
 -- =============================================
--- SP 5: Obtener Llantas Compatibles con Veh√≠culo
+-- SP 5: Obtener Llantas Compatibles con VehÌculo
 -- =============================================
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ObtenerLlantasCompatibles')
     DROP PROCEDURE sp_ObtenerLlantasCompatibles;
@@ -327,13 +327,13 @@ BEGIN
     SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
     
     /*
-    RETORNA: Todas las llantas compatibles con una versi√≥n espec√≠fica de veh√≠culo
-    Incluye informaci√≥n de la versi√≥n del veh√≠culo
+    RETORNA: Todas las llantas compatibles con una versiÛn especÌfica de vehÌculo
+    Incluye informaciÛn de la versiÛn del vehÌculo
     */
     
     BEGIN TRY
         SELECT 
-            -- Informaci√≥n del producto
+            -- InformaciÛn del producto
             p.ProductoID,
             p.CodigoProducto,
             p.NombreProducto,
@@ -360,7 +360,7 @@ BEGIN
             m.NombreMarca AS MarcaLlanta,
             m.PaisOrigen,
             
-            -- Categor√≠a
+            -- CategorÌa
             cat.NombreCategoria,
             
             -- Precios
@@ -380,7 +380,7 @@ BEGIN
             lc.Posicion AS PosicionVehiculo, -- DELANTERA, TRASERA, TODAS
             lc.Observacion AS ObservacionCompatibilidad,
             
-            -- Informaci√≥n del veh√≠culo
+            -- InformaciÛn del vehÌculo
             vm.Nombre AS MarcaVehiculo,
             vmod.NombreModelo AS ModeloVehiculo,
             vv.NombreVersion AS VersionVehiculo,
@@ -389,7 +389,7 @@ BEGIN
             -- Destacado
             p.Destacado,
             
-            -- Estad√≠sticas de ventas
+            -- EstadÌsticas de ventas
             (SELECT ISNULL(SUM(dv.Cantidad), 0) 
              FROM DetalleVentas dv 
              WHERE dv.ProductoID = p.ProductoID) AS TotalVendido
@@ -411,7 +411,7 @@ BEGIN
         AND (@PrecioMaxBs IS NULL OR p.PrecioVentaBs <= @PrecioMaxBs)
         AND (@SoloConStock = 0 OR p.StockActual > 0)
         
-        -- ORDENAMIENTO DIN√ÅMICO
+        -- ORDENAMIENTO DIN¡MICO
         ORDER BY 
             CASE WHEN @OrdenarPor = 'PRECIO_ASC' THEN p.PrecioVentaBs END ASC,
             CASE WHEN @OrdenarPor = 'PRECIO_DESC' THEN p.PrecioVentaBs END DESC,
@@ -429,3 +429,83 @@ BEGIN
     END CATCH
 END
 GO
+
+GO
+
+
+CREATE PROCEDURE sp_ObtenerHistorialVentasCliente
+    @ClienteID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
+    SELECT 
+        v.VentaID,
+        v.NumeroFactura,
+        v.FechaVenta,
+        v.TotalVentaBs,
+        ep.NombreEstado AS Estado,
+        (
+            SELECT 
+                p.NombreProducto,
+                dv.Cantidad,
+                dv.PrecioUnitarioBs,
+                dv.SubtotalBs
+            FROM DetalleVentas dv
+            JOIN Productos p ON dv.ProductoID = p.ProductoID
+            WHERE dv.VentaID = v.VentaID
+            FOR JSON PATH
+        ) AS Detalles
+    FROM Ventas v
+    JOIN EstadosPedido ep ON v.EstadoID = ep.EstadoID
+    WHERE v.ClienteID = @ClienteID
+    ORDER BY v.FechaVenta DESC;
+END
+GO
+
+
+GO
+
+
+-- SP para contar productos activos
+CREATE PROCEDURE sp_ContarProductosActivos
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(*) AS TotalProductos FROM Productos WHERE Activo = 1;
+END
+GO
+
+-- SP para contar clientes
+CREATE PROCEDURE sp_ContarClientes
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(*) AS TotalClientes FROM Clientes;
+END
+GO
+
+-- SP para obtener el total de ventas del mes actual
+CREATE PROCEDURE sp_ObtenerVentasDelMes
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT ISNULL(SUM(TotalVentaBs), 0) AS TotalVentasMes
+    FROM Ventas
+    WHERE MONTH(FechaVenta) = MONTH(GETDATE())
+      AND YEAR(FechaVenta) = YEAR(GETDATE());
+END
+GO
+
+-- SP para obtener el total de transacciones de ventas de hoy
+CREATE PROCEDURE sp_ObtenerTotalTransaccionesVentasHoy
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(*) AS TotalTransaccionesHoy
+    FROM Ventas
+    WHERE CAST(FechaVenta AS DATE) = CAST(GETDATE() AS DATE);
+END
+GO
+

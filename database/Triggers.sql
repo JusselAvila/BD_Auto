@@ -583,3 +583,7 @@ SELECT
 
 
     DROP TRIGGER IF EXISTS trg_ValidarStockAntesVenta;
+
+
+    DISABLE TRIGGER trg_ActualizarStockVenta ON DetalleVentas;
+   2     GO
