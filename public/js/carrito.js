@@ -33,7 +33,7 @@ async function cargarCarrito() {
     const sessionId = getSessionId();
     const response = await fetch(`${API_URL}/carrito/${sessionId}`);
     carritoActual = await response.json();
-    
+
     mostrarCarrito();
   } catch (err) {
     console.error('Error cargando carrito:', err);
@@ -46,16 +46,24 @@ async function cargarCarrito() {
 // =============================================
 function mostrarCarrito() {
   const carritoItems = document.getElementById('carrito-items');
-  const totalElement = document.getElementById('totalCarrito');
-  
+  const totalElement = document.getElementById('carrito-total');
+  const containerVacio = document.getElementById('carrito-vacio');
+  const containerContenido = document.getElementById('carrito-contenido');
+
   if (!carritoActual || carritoActual.items.length === 0) {
+    if (containerVacio) containerVacio.style.display = 'block';
+    if (containerContenido) containerContenido.style.display = 'none';
+
     carritoItems.innerHTML = '<p class="cart-empty">El carrito está vacío</p>';
     totalElement.textContent = 'Bs 0.00';
     return;
   }
-  
+
+  if (containerVacio) containerVacio.style.display = 'none';
+  if (containerContenido) containerContenido.style.display = 'block';
+
   carritoItems.innerHTML = '';
-  
+
   carritoActual.items.forEach(item => {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'carrito-item';
@@ -65,20 +73,20 @@ function mostrarCarrito() {
         <p class="item-precio">Bs ${item.precio.toFixed(2)}</p>
       </div>
       <div class="item-cantidad">
-        <button class="btn-cantidad" onclick="actualizarCantidad(${item.idProducto}, ${item.cantidad - 1})">-</button>
+        <button class="btn-cantidad" onclick="actualizarCantidad(${item.productoID}, ${item.cantidad - 1})">-</button>
         <span class="cantidad">${item.cantidad}</span>
-        <button class="btn-cantidad" onclick="actualizarCantidad(${item.idProducto}, ${item.cantidad + 1})">+</button>
+        <button class="btn-cantidad" onclick="actualizarCantidad(${item.productoID}, ${item.cantidad + 1})">+</button>
       </div>
       <div class="item-subtotal">
         <p>Bs ${item.subtotal.toFixed(2)}</p>
-        <button class="btn-eliminar" onclick="eliminarItem(${item.idProducto})">
+        <button class="btn-eliminar" onclick="eliminarItem(${item.productoID})">
           <i class="icon-trash">🗑️</i>
         </button>
       </div>
     `;
     carritoItems.appendChild(itemDiv);
   });
-  
+
   totalElement.textContent = `Bs ${carritoActual.total.toFixed(2)}`;
 }
 
@@ -87,23 +95,23 @@ function mostrarCarrito() {
 // =============================================
 async function actualizarCantidad(idProducto, nuevaCantidad) {
   if (nuevaCantidad < 0) return;
-  
+
   try {
     const sessionId = getSessionId();
     const response = await fetch(`${API_URL}/carrito/${sessionId}/actualizar`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idProducto, cantidad: nuevaCantidad })
+      body: JSON.stringify({ productoID: idProducto, cantidad: nuevaCantidad })
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error);
     }
-    
+
     carritoActual = await response.json();
     mostrarCarrito();
-    
+
     if (nuevaCantidad === 0) {
       mostrarMensaje('Producto eliminado del carrito', 'success');
     }
@@ -125,15 +133,15 @@ async function eliminarItem(idProducto) {
 // =============================================
 async function vaciarCarrito() {
   if (!confirm('¿Estás seguro de vaciar el carrito?')) return;
-  
+
   try {
     const sessionId = getSessionId();
     const response = await fetch(`${API_URL}/carrito/${sessionId}`, {
       method: 'DELETE'
     });
-    
+
     if (!response.ok) throw new Error('Error al vaciar carrito');
-    
+
     carritoActual = { items: [], total: 0 };
     mostrarCarrito();
     mostrarMensaje('Carrito vaciado', 'success');
@@ -149,11 +157,11 @@ async function vaciarCarrito() {
 function configurarEventos() {
   const btnVaciar = document.getElementById('btn-vaciar-carrito');
   const btnFinalizar = document.getElementById('btn-finalizar-compra');
-  
+
   if (btnVaciar) {
     btnVaciar.addEventListener('click', vaciarCarrito);
   }
-  
+
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', finalizarCompra);
   }
@@ -165,9 +173,9 @@ function configurarEventos() {
 function verificarAutenticacion() {
   const usuario = getUsuario();
   const checkoutSection = document.getElementById('checkout-section');
-  
+
   if (!checkoutSection) return;
-  
+
   if (usuario) {
     // Usuario autenticado - mostrar opciones de direcciones
     mostrarOpcionesAutenticado();
@@ -182,7 +190,7 @@ function verificarAutenticacion() {
 // =============================================
 async function mostrarOpcionesAutenticado() {
   const checkoutSection = document.getElementById('checkout-section');
-  
+
   try {
     const token = getAuthToken();
     const response = await fetch(`${API_URL}/direcciones`, {
@@ -190,15 +198,15 @@ async function mostrarOpcionesAutenticado() {
         'Authorization': `Bearer ${token}`
       }
     });
-    
+
     const direcciones = await response.json();
-    
+
     checkoutSection.innerHTML = `
       <h3>Datos de Entrega</h3>
       <div class="direcciones-list">
-        ${direcciones.length === 0 ? 
-          '<p>No tienes direcciones registradas. <a href="direcciones.html">Agregar dirección</a></p>' :
-          direcciones.map(dir => `
+        ${direcciones.length === 0 ?
+        '<p>No tienes direcciones registradas. <a href="direcciones.html">Agregar dirección</a></p>' :
+        direcciones.map(dir => `
             <label class="direccion-option">
               <input type="radio" name="direccion" value="${dir.IdDireccion}" ${dir.EsPrincipal ? 'checked' : ''}>
               <div class="direccion-info">
@@ -210,7 +218,7 @@ async function mostrarOpcionesAutenticado() {
               </div>
             </label>
           `).join('')
-        }
+      }
       </div>
       ${direcciones.length < 3 ? '<a href="direcciones.html" class="btn-link">Agregar nueva dirección</a>' : ''}
       <div class="campo">
@@ -229,7 +237,7 @@ async function mostrarOpcionesAutenticado() {
 // =============================================
 function mostrarOpcionesInvitado() {
   const checkoutSection = document.getElementById('checkout-section');
-  
+
   checkoutSection.innerHTML = `
     <h3>Datos de Contacto y Entrega</h3>
     <p class="info-message">Para realizar tu compra, necesitamos tus datos de contacto y entrega.</p>
@@ -269,21 +277,21 @@ async function finalizarCompra() {
     mostrarMensaje('El carrito está vacío', 'error');
     return;
   }
-  
+
   const usuario = getUsuario();
   let datosVenta = {
     sessionId: getSessionId()
   };
-  
+
   if (usuario) {
     // Usuario autenticado
     const direccionSeleccionada = document.querySelector('input[name="direccion"]:checked');
-    
+
     if (!direccionSeleccionada) {
       mostrarMensaje('Por favor selecciona una dirección de entrega', 'error');
       return;
     }
-    
+
     datosVenta.idCliente = usuario.idCliente;
     datosVenta.idDireccionEntrega = parseInt(direccionSeleccionada.value);
     datosVenta.observaciones = document.getElementById('observaciones')?.value || null;
@@ -292,49 +300,49 @@ async function finalizarCompra() {
     const email = document.getElementById('emailContacto')?.value;
     const telefono = document.getElementById('telefonoContacto')?.value;
     const direccion = document.getElementById('direccionEntrega')?.value;
-    
+
     if (!email || !telefono || !direccion) {
       mostrarMensaje('Por favor completa todos los campos requeridos', 'error');
       return;
     }
-    
+
     if (!validarEmail(email)) {
       mostrarMensaje('Por favor ingresa un email válido', 'error');
       return;
     }
-    
+
     datosVenta.emailContacto = email;
     datosVenta.telefonoContacto = telefono;
     datosVenta.direccionEntregaTemporal = direccion;
     datosVenta.observaciones = document.getElementById('observaciones')?.value || null;
   }
-  
+
   try {
     const response = await fetch(`${API_URL}/ventas`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         ...(usuario ? { 'Authorization': `Bearer ${getAuthToken()}` } : {})
       },
       body: JSON.stringify(datosVenta)
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error);
     }
-    
+
     const resultado = await response.json();
-    
+
     mostrarMensaje('¡Compra realizada exitosamente!', 'success');
-    
+
     // Mostrar confirmación
     mostrarConfirmacionCompra(resultado.venta);
-    
+
     // Limpiar carrito
     carritoActual = { items: [], total: 0 };
     mostrarCarrito();
-    
+
   } catch (err) {
     console.error('Error finalizando compra:', err);
     mostrarMensaje(err.message || 'Error al procesar la compra', 'error');
@@ -369,9 +377,9 @@ function mostrarConfirmacionCompra(venta) {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
-  
+
   // Estilos del modal
   modal.style.cssText = `
     position: fixed;
@@ -419,9 +427,9 @@ function mostrarMensaje(mensaje, tipo = 'info') {
     z-index: 10000;
     animation: slideIn 0.3s ease-in-out;
   `;
-  
+
   document.body.appendChild(mensajeDiv);
-  
+
   setTimeout(() => {
     mensajeDiv.style.animation = 'slideOut 0.3s ease-in-out';
     setTimeout(() => mensajeDiv.remove(), 300);

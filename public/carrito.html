@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carrito - Avila's Tyre Company</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
   <header>
     <h1><a href="index.html" style="color: white; text-decoration: none;">🚗 Avila's Tyre Company</a></h1>
@@ -29,7 +31,7 @@
       <div class="carrito-grid">
         <div class="carrito-productos">
           <h3>Productos en tu carrito</h3>
-          <ul id="items-carrito"></ul>
+          <ul id="carrito-items"></ul>
         </div>
 
         <div class="carrito-resumen">
@@ -41,9 +43,9 @@
             </div>
             <div class="resumen-linea resumen-total">
               <span><strong>Total:</strong></span>
-              <span id="total"><strong>Bs 0.00</strong></span>
+              <span id="carrito-total"><strong>Bs 0.00</strong></span>
             </div>
-            <button id="btn-finalizar" class="btn-primary btn-block">✅ Finalizar Compra</button>
+            <button id="btn-finalizar-compra" class="btn-primary btn-block">✅ Finalizar Compra</button>
           </div>
         </div>
       </div>
@@ -85,7 +87,7 @@
 
         <div id="checkout-invitado" style="display: none;">
           <p style="text-align: center; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 5px;">
-            ℹ️ Debes <a href="login.html" style="color: #667eea; font-weight: bold;">iniciar sesión</a> o 
+            ℹ️ Debes <a href="login.html" style="color: #667eea; font-weight: bold;">iniciar sesión</a> o
             <a href="registro-persona.html" style="color: #667eea; font-weight: bold;">registrarte</a> para comprar.
           </p>
           <p style="text-align: center; color: #666;">
@@ -154,4 +156,5 @@
 
   <script src="js/carrito.js"></script>
 </body>
+
 </html>
