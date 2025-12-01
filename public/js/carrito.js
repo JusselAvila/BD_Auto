@@ -1,437 +1,369 @@
-// Configuración
-const API_URL = 'http://localhost:3000/api';
+// =============================================
+// CONFIGURACIÓN Y VARIABLES GLOBALES
+// =============================================
+const API_URL = '/api'; // Usar rutas relativas
+let carritoActual = null;
+let direccionParaSeleccionar = null; // Para seleccionar una dirección recién creada
 
+// =============================================
+// HELPERS - OBTENER DATOS DE SESIÓN
+// =============================================
 function getSessionId() {
-  return localStorage.getItem('sessionId');
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+        sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('sessionId', sessionId);
+    }
+    return sessionId;
 }
 
 function getAuthToken() {
-  return localStorage.getItem('authToken');
+    return localStorage.getItem('authToken');
 }
 
 function getUsuario() {
-  const usuario = localStorage.getItem('usuario');
-  return usuario ? JSON.parse(usuario) : null;
+    const usuario = localStorage.getItem('usuario');
+    return usuario ? JSON.parse(usuario) : null;
 }
 
-let carritoActual = null;
-
 // =============================================
-// CARGA INICIAL
+// INICIALIZACIÓN DE LA PÁGINA
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-  await cargarCarrito();
-  configurarEventos();
-  verificarAutenticacion();
+    await cargarCarrito();
+    configurarEventosPrincipales();
 });
 
 // =============================================
-// CARGAR CARRITO
+// LÓGICA PRINCIPAL DEL CARRITO
 // =============================================
+
 async function cargarCarrito() {
-  try {
-    const sessionId = getSessionId();
-    const response = await fetch(`${API_URL}/carrito/${sessionId}`);
-    carritoActual = await response.json();
-
-    mostrarCarrito();
-  } catch (err) {
-    console.error('Error cargando carrito:', err);
-    mostrarMensaje('Error al cargar el carrito', 'error');
-  }
+    try {
+        const sessionId = getSessionId();
+        if (!sessionId) return;
+        const response = await fetch(`${API_URL}/carrito/${sessionId}`);
+        if (!response.ok) throw new Error('No se pudo cargar el carrito.');
+        
+        carritoActual = await response.json();
+        renderizarCarrito();
+    } catch (error) {
+        console.error('Error cargando carrito:', error);
+        mostrarMensaje(error.message, 'error');
+    }
 }
 
-// =============================================
-// MOSTRAR CARRITO EN UI
-// =============================================
-function mostrarCarrito() {
-  const carritoItems = document.getElementById('carrito-items');
-  const totalElement = document.getElementById('carrito-total');
-  const containerVacio = document.getElementById('carrito-vacio');
-  const containerContenido = document.getElementById('carrito-contenido');
+function renderizarCarrito() {
+    const itemsContainer = document.getElementById('carrito-items');
+    const totalElement = document.getElementById('carrito-total');
+    const subtotalElement = document.getElementById('subtotal');
+    const divVacio = document.getElementById('carrito-vacio');
+    const divContenido = document.getElementById('carrito-contenido');
 
-  if (!carritoActual || carritoActual.items.length === 0) {
-    if (containerVacio) containerVacio.style.display = 'block';
-    if (containerContenido) containerContenido.style.display = 'none';
-
-    carritoItems.innerHTML = '<p class="cart-empty">El carrito está vacío</p>';
-    totalElement.textContent = 'Bs 0.00';
-    return;
-  }
-
-  if (containerVacio) containerVacio.style.display = 'none';
-  if (containerContenido) containerContenido.style.display = 'block';
-
-  carritoItems.innerHTML = '';
-
-  carritoActual.items.forEach(item => {
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'carrito-item';
-    itemDiv.innerHTML = `
-      <div class="item-info">
-        <h4>${item.nombre}</h4>
-        <p class="item-precio">Bs ${item.precio.toFixed(2)}</p>
-      </div>
-      <div class="item-cantidad">
-        <button class="btn-cantidad" onclick="actualizarCantidad(${item.productoID}, ${item.cantidad - 1})">-</button>
-        <span class="cantidad">${item.cantidad}</span>
-        <button class="btn-cantidad" onclick="actualizarCantidad(${item.productoID}, ${item.cantidad + 1})">+</button>
-      </div>
-      <div class="item-subtotal">
-        <p>Bs ${item.subtotal.toFixed(2)}</p>
-        <button class="btn-eliminar" onclick="eliminarItem(${item.productoID})">
-          <i class="icon-trash">🗑️</i>
-        </button>
-      </div>
-    `;
-    carritoItems.appendChild(itemDiv);
-  });
-
-  totalElement.textContent = `Bs ${carritoActual.total.toFixed(2)}`;
-}
-
-// =============================================
-// ACTUALIZAR CANTIDAD
-// =============================================
-async function actualizarCantidad(idProducto, nuevaCantidad) {
-  if (nuevaCantidad < 0) return;
-
-  try {
-    const sessionId = getSessionId();
-    const response = await fetch(`${API_URL}/carrito/${sessionId}/actualizar`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productoID: idProducto, cantidad: nuevaCantidad })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error);
+    if (!carritoActual || carritoActual.items.length === 0) {
+        divVacio.style.display = 'block';
+        divContenido.style.display = 'none';
+        return;
     }
 
-    carritoActual = await response.json();
-    mostrarCarrito();
+    divVacio.style.display = 'none';
+    divContenido.style.display = 'block';
 
-    if (nuevaCantidad === 0) {
-      mostrarMensaje('Producto eliminado del carrito', 'success');
-    }
-  } catch (err) {
-    console.error('Error actualizando cantidad:', err);
-    mostrarMensaje('Error al actualizar cantidad', 'error');
-  }
-}
+    itemsContainer.innerHTML = '';
+    let subtotal = 0;
 
-// =============================================
-// ELIMINAR ITEM
-// =============================================
-async function eliminarItem(idProducto) {
-  await actualizarCantidad(idProducto, 0);
-}
-
-// =============================================
-// VACIAR CARRITO
-// =============================================
-async function vaciarCarrito() {
-  if (!confirm('¿Estás seguro de vaciar el carrito?')) return;
-
-  try {
-    const sessionId = getSessionId();
-    const response = await fetch(`${API_URL}/carrito/${sessionId}`, {
-      method: 'DELETE'
+    carritoActual.items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'carrito-item';
+        itemDiv.innerHTML = `
+            <div class="item-info">
+                <h4>${item.nombre}</h4>
+                <p class="item-precio">Bs ${item.precio.toFixed(2)}</p>
+            </div>
+            <div class="item-cantidad">
+                <button class="btn-cantidad" data-id="${item.productoID}" data-cantidad="${item.cantidad - 1}">-</button>
+                <span class="cantidad">${item.cantidad}</span>
+                <button class="btn-cantidad" data-id="${item.productoID}" data-cantidad="${item.cantidad + 1}">+</button>
+            </div>
+            <div class="item-subtotal">
+                <p>Bs ${item.subtotal.toFixed(2)}</p>
+                <button class="btn-eliminar" data-id="${item.productoID}">🗑️</button>
+            </div>
+        `;
+        itemsContainer.appendChild(itemDiv);
+        subtotal += item.subtotal;
     });
 
-    if (!response.ok) throw new Error('Error al vaciar carrito');
+    subtotalElement.textContent = `Bs ${subtotal.toFixed(2)}`;
+    totalElement.textContent = `Bs ${carritoActual.total.toFixed(2)}`;
+}
 
-    carritoActual = { items: [], total: 0 };
-    mostrarCarrito();
-    mostrarMensaje('Carrito vaciado', 'success');
-  } catch (err) {
-    console.error('Error vaciando carrito:', err);
-    mostrarMensaje('Error al vaciar carrito', 'error');
-  }
+async function actualizarCantidad(productoID, cantidad) {
+    if (cantidad < 0) return;
+    try {
+        const sessionId = getSessionId();
+        const response = await fetch(`${API_URL}/carrito/${sessionId}/actualizar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productoID, cantidad })
+        });
+        if (!response.ok) throw new Error('Error al actualizar.');
+
+        carritoActual = await response.json();
+        renderizarCarrito();
+    } catch (error) {
+        console.error('Error actualizando cantidad:', error);
+        mostrarMensaje(error.message, 'error');
+    }
 }
 
 // =============================================
-// CONFIGURAR EVENTOS
+// LÓGICA DEL MODAL DE CHECKOUT
 // =============================================
-function configurarEventos() {
-  const btnVaciar = document.getElementById('btn-vaciar-carrito');
-  const btnFinalizar = document.getElementById('btn-finalizar-compra');
 
-  if (btnVaciar) {
-    btnVaciar.addEventListener('click', vaciarCarrito);
-  }
+async function abrirModalCheckout() {
+    const usuario = getUsuario();
+    const modal = document.getElementById('modal-checkout');
 
-  if (btnFinalizar) {
-    btnFinalizar.addEventListener('click', finalizarCompra);
-  }
+    if (!usuario) {
+        document.getElementById('checkout-invitado').style.display = 'block';
+        document.getElementById('checkout-autenticado').style.display = 'none';
+    } else {
+        document.getElementById('checkout-invitado').style.display = 'none';
+        document.getElementById('checkout-autenticado').style.display = 'block';
+        document.getElementById('form-nueva-direccion').style.display = 'none';
+        await cargarDireccionesCheckout();
+        await cargarMetodosPagoCheckout();
+    }
+    modal.style.display = 'flex';
 }
 
-// =============================================
-// VERIFICAR AUTENTICACIÓN
-// =============================================
-function verificarAutenticacion() {
-  const usuario = getUsuario();
-  const checkoutSection = document.getElementById('checkout-section');
-
-  if (!checkoutSection) return;
-
-  if (usuario) {
-    // Usuario autenticado - mostrar opciones de direcciones
-    mostrarOpcionesAutenticado();
-  } else {
-    // Usuario no autenticado - solicitar datos de contacto
-    mostrarOpcionesInvitado();
-  }
+function cerrarModal() {
+    document.getElementById('modal-checkout').style.display = 'none';
 }
 
-// =============================================
-// OPCIONES PARA USUARIO AUTENTICADO
-// =============================================
-async function mostrarOpcionesAutenticado() {
-  const checkoutSection = document.getElementById('checkout-section');
-
-  try {
+async function fetchAPI(url, options = {}) {
     const token = getAuthToken();
-    const response = await fetch(`${API_URL}/direcciones`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    const direcciones = await response.json();
-
-    checkoutSection.innerHTML = `
-      <h3>Datos de Entrega</h3>
-      <div class="direcciones-list">
-        ${direcciones.length === 0 ?
-        '<p>No tienes direcciones registradas. <a href="direcciones.html">Agregar dirección</a></p>' :
-        direcciones.map(dir => `
-            <label class="direccion-option">
-              <input type="radio" name="direccion" value="${dir.IdDireccion}" ${dir.EsPrincipal ? 'checked' : ''}>
-              <div class="direccion-info">
-                <strong>${dir.NombreDireccion}</strong>
-                <p>${dir.Direccion}, ${dir.Ciudad}</p>
-                ${dir.Zona ? `<p>Zona: ${dir.Zona}</p>` : ''}
-                ${dir.Referencia ? `<p>Ref: ${dir.Referencia}</p>` : ''}
-                <p>Tel: ${dir.Telefono}</p>
-              </div>
-            </label>
-          `).join('')
-      }
-      </div>
-      ${direcciones.length < 3 ? '<a href="direcciones.html" class="btn-link">Agregar nueva dirección</a>' : ''}
-      <div class="campo">
-        <label for="observaciones">Observaciones (opcional)</label>
-        <textarea id="observaciones" rows="3" placeholder="Instrucciones especiales para la entrega"></textarea>
-      </div>
-    `;
-  } catch (err) {
-    console.error('Error cargando direcciones:', err);
-    mostrarMensaje('Error al cargar direcciones', 'error');
-  }
-}
-
-// =============================================
-// OPCIONES PARA USUARIO INVITADO
-// =============================================
-function mostrarOpcionesInvitado() {
-  const checkoutSection = document.getElementById('checkout-section');
-
-  checkoutSection.innerHTML = `
-    <h3>Datos de Contacto y Entrega</h3>
-    <p class="info-message">Para realizar tu compra, necesitamos tus datos de contacto y entrega.</p>
-    
-    <div class="campo">
-      <label for="emailContacto">Email *</label>
-      <input type="email" id="emailContacto" required placeholder="tu@email.com">
-    </div>
-    
-    <div class="campo">
-      <label for="telefonoContacto">Teléfono *</label>
-      <input type="tel" id="telefonoContacto" required placeholder="70000000">
-    </div>
-    
-    <div class="campo">
-      <label for="direccionEntrega">Dirección de Entrega *</label>
-      <textarea id="direccionEntrega" required rows="3" placeholder="Calle, número, zona, ciudad"></textarea>
-    </div>
-    
-    <div class="campo">
-      <label for="observaciones">Observaciones (opcional)</label>
-      <textarea id="observaciones" rows="3" placeholder="Instrucciones especiales"></textarea>
-    </div>
-    
-    <p class="register-suggestion">
-      ¿Quieres guardar tus datos para futuras compras? 
-      <a href="registro-persona.html">Regístrate aquí</a>
-    </p>
-  `;
-}
-
-// =============================================
-// FINALIZAR COMPRA
-// =============================================
-async function finalizarCompra() {
-  if (!carritoActual || carritoActual.items.length === 0) {
-    mostrarMensaje('El carrito está vacío', 'error');
-    return;
-  }
-
-  const usuario = getUsuario();
-  let datosVenta = {
-    sessionId: getSessionId()
-  };
-
-  if (usuario) {
-    // Usuario autenticado
-    const direccionSeleccionada = document.querySelector('input[name="direccion"]:checked');
-
-    if (!direccionSeleccionada) {
-      mostrarMensaje('Por favor selecciona una dirección de entrega', 'error');
-      return;
+    if (!token) {
+        mostrarMensaje('No estás autenticado.', 'error');
+        throw new Error('Token no encontrado');
     }
-
-    datosVenta.idCliente = usuario.idCliente;
-    datosVenta.idDireccionEntrega = parseInt(direccionSeleccionada.value);
-    datosVenta.observaciones = document.getElementById('observaciones')?.value || null;
-  } else {
-    // Usuario invitado
-    const email = document.getElementById('emailContacto')?.value;
-    const telefono = document.getElementById('telefonoContacto')?.value;
-    const direccion = document.getElementById('direccionEntrega')?.value;
-
-    if (!email || !telefono || !direccion) {
-      mostrarMensaje('Por favor completa todos los campos requeridos', 'error');
-      return;
-    }
-
-    if (!validarEmail(email)) {
-      mostrarMensaje('Por favor ingresa un email válido', 'error');
-      return;
-    }
-
-    datosVenta.emailContacto = email;
-    datosVenta.telefonoContacto = telefono;
-    datosVenta.direccionEntregaTemporal = direccion;
-    datosVenta.observaciones = document.getElementById('observaciones')?.value || null;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/ventas`, {
-      method: 'POST',
-      headers: {
+    const headers = {
         'Content-Type': 'application/json',
-        ...(usuario ? { 'Authorization': `Bearer ${getAuthToken()}` } : {})
-      },
-      body: JSON.stringify(datosVenta)
-    });
-
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+    };
+    const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ocurrió un error en la solicitud.');
+    }
+    return response.json();
+}
+
+async function cargarDireccionesCheckout() {
+    const select = document.getElementById('direccion-select');
+    try {
+        const direcciones = await fetchAPI(`${API_URL}/direcciones`);
+        select.innerHTML = '<option value="">Seleccione una dirección...</option>';
+        if (direcciones.length === 0) {
+            select.innerHTML = '<option value="">No tienes direcciones guardadas</option>';
+            return;
+        }
+        direcciones.forEach(dir => {
+            const option = document.createElement('option');
+            option.value = dir.DireccionID;
+            option.textContent = `${dir.NombreDireccion} - ${dir.Calle}, ${dir.NombreCiudad}`;
+            if (dir.EsPrincipal) option.selected = true;
+            select.appendChild(option);
+        });
+        if (direccionParaSeleccionar) {
+            select.value = direccionParaSeleccionar;
+            direccionParaSeleccionar = null;
+        }
+    } catch (error) {
+        console.error('Error cargando direcciones:', error);
+        select.innerHTML = '<option value="">Error al cargar direcciones</option>';
+    }
+}
+
+async function cargarMetodosPagoCheckout() {
+    const select = document.getElementById('metodo-pago');
+    try {
+        const metodos = await fetch(`${API_URL}/metodos-pago`);
+        if (!metodos.ok) throw new Error('Error de red.');
+        const data = await metodos.json();
+        select.innerHTML = '<option value="">Seleccione un método de pago...</option>';
+        data.forEach(metodo => {
+            const option = document.createElement('option');
+            option.value = metodo.MetodoPagoID;
+            option.textContent = metodo.NombreMetodo;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error cargando métodos de pago:', error);
+        select.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+// =============================================
+// LÓGICA DEL FORMULARIO DE NUEVA DIRECCIÓN (DENTRO DEL MODAL)
+// =============================================
+
+function mostrarFormularioNuevaDireccion() {
+    document.getElementById('checkout-autenticado').style.display = 'none';
+    document.getElementById('form-nueva-direccion').style.display = 'block';
+    cargarDepartamentosForm();
+}
+
+function cancelarNuevaDireccion() {
+    document.getElementById('form-nueva-direccion').style.display = 'none';
+    document.getElementById('checkout-autenticado').style.display = 'block';
+}
+
+async function cargarDepartamentosForm() {
+    const select = document.getElementById('departamento');
+    try {
+        const response = await fetch('/api/departamentos');
+        const departamentos = await response.json();
+        select.innerHTML = '<option value="">Seleccione un departamento</option>';
+        departamentos.forEach(dep => {
+            const option = document.createElement('option');
+            option.value = dep.DepartamentoID;
+            option.textContent = dep.NombreDepartamento;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error cargando departamentos:', error);
+    }
+}
+
+async function cargarCiudadesForm(departamentoID) {
+    const select = document.getElementById('ciudad');
+    select.disabled = true;
+    try {
+        const response = await fetch(`/api/ciudades/${departamentoID}`);
+        const ciudades = await response.json();
+        select.innerHTML = '<option value="">Seleccione una ciudad</option>';
+        ciudades.forEach(ciudad => {
+            const option = document.createElement('option');
+            option.value = ciudad.CiudadID;
+            option.textContent = ciudad.NombreCiudad;
+            select.appendChild(option);
+        });
+        select.disabled = false;
+    } catch (error) {
+        console.error('Error cargando ciudades:', error);
+    }
+}
+
+async function guardarNuevaDireccion(e) {
+    e.preventDefault();
+    const formData = {
+        NombreDireccion: document.getElementById('nombre-direccion').value,
+        Calle: document.getElementById('calle').value,
+        Zona: document.getElementById('zona').value,
+        CiudadID: document.getElementById('ciudad').value,
+        Referencia: document.getElementById('referencia').value,
+        EsPrincipal: false 
+    };
+
+    try {
+        const data = await fetchAPI(`${API_URL}/perfil/direccion`, {
+            method: 'PUT',
+            body: JSON.stringify(formData)
+        });
+        mostrarMensaje('Dirección guardada con éxito.', 'success');
+        direccionParaSeleccionar = data.data.DireccionID;
+        cancelarNuevaDireccion();
+        await cargarDireccionesCheckout();
+    } catch (error) {
+        console.error('Error guardando nueva dirección:', error);
+        mostrarMensaje(error.message, 'error');
+    }
+}
+
+// =============================================
+// LÓGICA DE FINALIZAR VENTA
+// =============================================
+async function procesarVenta(e) {
+    e.preventDefault();
+    const direccionEnvioID = document.getElementById('direccion-select').value;
+    const metodoPagoID = document.getElementById('metodo-pago').value;
+
+    if (!direccionEnvioID) {
+        mostrarMensaje('Por favor, selecciona una dirección de entrega.', 'error');
+        return;
+    }
+    if (!metodoPagoID) {
+        mostrarMensaje('Por favor, selecciona un método de pago.', 'error');
+        return;
     }
 
-    const resultado = await response.json();
+    const payload = {
+        direccionEnvioID: parseInt(direccionEnvioID),
+        metodoPagoID: parseInt(metodoPagoID),
+        observaciones: document.getElementById('observaciones').value,
+        sessionId: getSessionId()
+    };
 
-    mostrarMensaje('¡Compra realizada exitosamente!', 'success');
-
-    // Mostrar confirmación
-    mostrarConfirmacionCompra(resultado.venta);
-
-    // Limpiar carrito
-    carritoActual = { items: [], total: 0 };
-    mostrarCarrito();
-
-  } catch (err) {
-    console.error('Error finalizando compra:', err);
-    mostrarMensaje(err.message || 'Error al procesar la compra', 'error');
-  }
+    try {
+        const data = await fetchAPI(`${API_URL}/ventas`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        cerrarModal();
+        document.getElementById('numero-factura').textContent = `Factura #${data.venta.numeroFactura}`;
+        document.getElementById('modal-confirmacion').style.display = 'flex';
+    } catch (error) {
+        console.error('Error al procesar la venta:', error);
+        mostrarMensaje(error.message, 'error');
+    }
 }
 
 // =============================================
-// MOSTRAR CONFIRMACIÓN DE COMPRA
+// CONFIGURACIÓN DE EVENTOS PRINCIPALES
 // =============================================
-function mostrarConfirmacionCompra(venta) {
-  const modal = document.createElement('div');
-  modal.className = 'modal-confirmacion';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>¡Compra Exitosa!</h2>
-      </div>
-      <div class="modal-body">
-        <div class="icono-exito">✓</div>
-        <p>Tu pedido ha sido registrado exitosamente</p>
-        <div class="datos-compra">
-          <p><strong>Número de Factura:</strong> ${venta.numeroFactura}</p>
-          <p><strong>ID de Venta:</strong> ${venta.idVenta}</p>
-        </div>
-        <p class="mensaje-confirmacion">
-          Recibirás una confirmación por email con los detalles de tu pedido.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-primary" onclick="cerrarModalConfirmacion()">Entendido</button>
-        <a href="index.html" class="btn-secondary">Volver al Inicio</a>
-      </div>
-    </div>
-  `;
+function configurarEventosPrincipales() {
+    const itemsContainer = document.getElementById('carrito-items');
+    if (itemsContainer) {
+        itemsContainer.addEventListener('click', e => {
+            if (e.target.matches('.btn-cantidad')) {
+                const id = e.target.dataset.id;
+                const cant = parseInt(e.target.dataset.cantidad);
+                actualizarCantidad(id, cant);
+            }
+            if (e.target.matches('.btn-eliminar')) {
+                const id = e.target.dataset.id;
+                if (confirm('¿Quitar este producto del carrito?')) {
+                    actualizarCantidad(id, 0);
+                }
+            }
+        });
+    }
 
-  document.body.appendChild(modal);
-
-  // Estilos del modal
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-  `;
-}
-
-function cerrarModalConfirmacion() {
-  const modal = document.querySelector('.modal-confirmacion');
-  if (modal) {
-    modal.remove();
-    window.location.href = 'index.html';
-  }
+    document.getElementById('btn-finalizar-compra').addEventListener('click', abrirModalCheckout);
+    document.querySelector('#modal-checkout .modal-close').addEventListener('click', cerrarModal);
+    document.getElementById('btn-agregar-direccion').addEventListener('click', (e) => {
+        e.preventDefault();
+        mostrarFormularioNuevaDireccion();
+    });
+    document.querySelector('#form-nueva-direccion .btn-secondary').addEventListener('click', cancelarNuevaDireccion);
+    document.getElementById('departamento').addEventListener('change', (e) => {
+        if (e.target.value) cargarCiudadesForm(e.target.value);
+    });
+    document.getElementById('form-agregar-direccion').addEventListener('submit', guardarNuevaDireccion);
+    document.getElementById('form-checkout').addEventListener('submit', procesarVenta);
 }
 
 // =============================================
 // UTILIDADES
 // =============================================
-function validarEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-}
-
 function mostrarMensaje(mensaje, tipo = 'info') {
-  const mensajeDiv = document.createElement('div');
-  mensajeDiv.className = `mensaje mensaje-${tipo}`;
-  mensajeDiv.textContent = mensaje;
-  mensajeDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
-    background: ${tipo === 'success' ? '#4CAF50' : tipo === 'error' ? '#f44336' : '#2196F3'};
-    color: white;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 10000;
-    animation: slideIn 0.3s ease-in-out;
-  `;
-
-  document.body.appendChild(mensajeDiv);
-
-  setTimeout(() => {
-    mensajeDiv.style.animation = 'slideOut 0.3s ease-in-out';
-    setTimeout(() => mensajeDiv.remove(), 300);
-  }, 3000);
+    const div = document.createElement('div');
+    div.className = `mensaje-flotante`;
+    div.style.backgroundColor = tipo === 'error' ? '#f44336' : '#4CAF50';
+    div.textContent = mensaje;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
 }

@@ -262,6 +262,101 @@ app.post('/api/login', async (req, res) => {
 });
 
 // =============================================
+// RUTAS DE PERFIL DE USUARIO
+// =============================================
+
+// Obtener perfil completo del usuario (datos personales + dirección)
+app.get('/api/perfil', authenticateToken, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .input('Email', sql.NVarChar(100), req.user.Email) // Cambiado a Email
+      .execute('sp_ObtenerPerfilUsuario'); 
+    
+    if (result.recordset.length === 0) {
+        return res.status(404).json({ error: 'Perfil de usuario no encontrado.' });
+    }
+
+    const userData = result.recordset[0];
+
+    const formattedData = {
+      nombre: userData.NombreDisplay, // Usando el campo correcto del SP
+      email: userData.Email,
+      telefono: userData.Telefono, 
+      direccion: userData.DireccionID ? { // Solo incluir dirección si existe
+          DireccionID: userData.DireccionID,
+          NombreDireccion: userData.NombreDireccion,
+          Calle: userData.Calle,
+          Zona: userData.Zona,
+          CiudadID: userData.CiudadID,
+          NombreCiudad: userData.NombreCiudad,
+          DepartamentoID: userData.DepartamentoID,
+          NombreDepartamento: userData.NombreDepartamento,
+          Referencia: userData.Referencia,
+          EsPrincipal: userData.EsPrincipal
+      } : null
+    };
+    res.json(formattedData);
+
+  } catch (err) {
+    console.error('Error obteniendo perfil de usuario:', err);
+    res.status(500).json({ error: 'Error al obtener el perfil del usuario.' });
+  }
+});
+
+// Actualizar información personal del usuario
+app.put('/api/perfil/usuario', authenticateToken, async (req, res) => {
+  const { nombre, telefono } = req.body; 
+  if (!nombre) {
+    return res.status(400).json({ error: 'El campo nombre es requerido.' });
+  }
+
+  try {
+    const result = await sqlPool.request()
+      .input('ClienteID', sql.Int, req.user.ClienteID)
+      .input('Nombres', sql.NVarChar(100), nombre) 
+      .input('ApellidoPaterno', sql.NVarChar(100), null)
+      .input('ApellidoMaterno', sql.NVarChar(100), null)
+      .input('Telefono', sql.NVarChar(20), telefono || null) 
+      .input('FechaNacimiento', sql.Date, null)
+      .execute('sp_ActualizarClientePersona'); 
+    
+    res.json({ success: true, message: 'Información personal actualizada con éxito.', data: result.recordset[0] });
+
+  } catch (err) {
+    console.error('Error actualizando perfil de usuario:', err);
+    res.status(500).json({ error: 'Error al actualizar la información personal.' });
+  }
+});
+
+// Crear o actualizar la dirección del usuario
+app.put('/api/perfil/direccion', authenticateToken, async (req, res) => {
+    const { DireccionID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal } = req.body;
+    if (!NombreDireccion || !Calle || !CiudadID) {
+        return res.status(400).json({ error: 'Los campos Nombre de Dirección, Calle y Ciudad son requeridos.' });
+    }
+
+    try {
+        const result = await sqlPool.request()
+            .input('ClienteID', sql.Int, req.user.ClienteID)
+            .input('DireccionID', sql.Int, DireccionID || null) // Puede ser NULL para crear nueva
+            .input('NombreDireccion', sql.NVarChar(50), NombreDireccion)
+            .input('Calle', sql.NVarChar(255), Calle)
+            .input('Zona', sql.NVarChar(100), Zona || null) 
+            .input('CiudadID', sql.Int, CiudadID) 
+            .input('Referencia', sql.NVarChar(255), Referencia || null)
+            .input('EsPrincipal', sql.Bit, EsPrincipal) 
+            .execute('sp_ActualizarCrearDireccion');
+
+        res.json({ success: true, message: 'Dirección actualizada con éxito.', data: result.recordset[0] });
+
+    } catch (err) {
+        console.error('Error actualizando la dirección:', err);
+        res.status(500).json({ error: 'Error al actualizar la dirección.' });
+    }
+});
+
+
+// =============================================
 // RUTAS DE GEOGRAFÍA (BOLIVIA)
 // =============================================
 
@@ -479,6 +574,7 @@ app.post('/api/carrito/:sessionId/agregar', async (req, res) => {
 app.put('/api/carrito/:sessionId/actualizar', async (req, res) => {
   try {
     const { productoID, cantidad } = req.body;
+    const productoIdNum = parseInt(productoID, 10); // Asegurar que sea un número
 
     const carrito = await CarritoTemporal.findOne({ sessionId: req.params.sessionId });
 
@@ -487,13 +583,16 @@ app.put('/api/carrito/:sessionId/actualizar', async (req, res) => {
     }
 
     if (cantidad === 0) {
-      carrito.items = carrito.items.filter(item => item.productoID !== productoID);
+      carrito.items = carrito.items.filter(item => item.productoID !== productoIdNum);
     } else {
-      const itemIndex = carrito.items.findIndex(item => item.productoID === productoID);
+      const itemIndex = carrito.items.findIndex(item => item.productoID === productoIdNum);
 
       if (itemIndex > -1) {
         carrito.items[itemIndex].cantidad = cantidad;
         carrito.items[itemIndex].subtotal = carrito.items[itemIndex].cantidad * carrito.items[itemIndex].precio;
+      } else if (cantidad > 0) {
+        // Opcional: si el item no se encuentra, no hacer nada o agregarlo. Por ahora no hacemos nada.
+        console.warn(`Intento de actualizar producto ${productoIdNum} que no está en el carrito.`);
       }
     }
 
@@ -1017,6 +1116,111 @@ app.get('/api/admin/marcas', async (req, res) => {
 });
 
 
+
+
+app.get("/direcciones/departamentos", async (req, res) => {
+    try {
+        const pool = await getPool();
+        const result = await pool.request().execute("SP_ObtenerDepartamentos");
+
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Error SP_ObtenerDepartamentos:", err);
+        res.status(500).json({ error: "Error al obtener departamentos" });
+    }
+});
+
+// ========================================
+// 2. OBTENER CIUDADES POR DEPARTAMENTO
+// ========================================
+app.get("/direcciones/ciudades/:departamentoID", async (req, res) => {
+    const { departamentoID } = req.params;
+
+    try {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input("DepartamentoID", sql.Int, departamentoID)
+            .execute("SP_ObtenerCiudadesPorDepartamento");
+
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Error SP_ObtenerCiudadesPorDepartamento:", err);
+        res.status(500).json({ error: "Error al obtener ciudades" });
+    }
+});
+
+// ========================================
+// 3. OBTENER DIRECCIONES POR CLIENTE
+// ========================================
+app.get("/direcciones/cliente/:clienteID", async (req, res) => {
+    const { clienteID } = req.params;
+
+    try {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input("ClienteID", sql.Int, clienteID)
+            .execute("SP_ObtenerDireccionesPorCliente");
+
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Error SP_ObtenerDireccionesPorCliente:", err);
+        res.status(500).json({ error: "Error al obtener direcciones del cliente" });
+    }
+});
+
+// ========================================
+// 4. GUARDAR DIRECCION (CREAR o ACTUALIZAR)
+// ========================================
+app.post("/direcciones/guardar", async (req, res) => {
+    const {
+        DireccionID,
+        ClienteID,
+        NombreDireccion,
+        Calle,
+        Zona,
+        CiudadID,
+        Referencia,
+        EsPrincipal
+    } = req.body;
+
+    try {
+        const pool = await getPool();
+        const result = await pool.request()
+            .input("DireccionID", sql.Int, DireccionID || null)
+            .input("ClienteID", sql.Int, ClienteID)
+            .input("NombreDireccion", sql.NVarChar(50), NombreDireccion)
+            .input("Calle", sql.NVarChar(255), Calle)
+            .input("Zona", sql.NVarChar(100), Zona)
+            .input("CiudadID", sql.Int, CiudadID)
+            .input("Referencia", sql.NVarChar(255), Referencia)
+            .input("EsPrincipal", sql.Bit, EsPrincipal)
+            .execute("SP_GuardarDireccion");
+
+        res.json(result.recordset[0]);
+    } catch (err) {
+        console.error("Error SP_GuardarDireccion:", err);
+        res.status(500).json({ error: "Error al guardar la dirección" });
+    }
+});
+
+// ========================================
+// 5. ELIMINAR DIRECCIÓN (soft delete)
+// ========================================
+app.delete("/direcciones/eliminar/:direccionID", async (req, res) => {
+    const { direccionID } = req.params;
+
+    try {
+        const pool = await getPool();
+        await pool.request()
+            .input("DireccionID", sql.Int, direccionID)
+            .execute("SP_EliminarDireccion");
+
+        res.json({ mensaje: "Dirección eliminada correctamente" });
+    } catch (err) {
+        console.error("Error SP_EliminarDireccion:", err);
+        res.status(500).json({ error: "Error al eliminar la dirección" });
+    }
+});
 
 
 

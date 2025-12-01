@@ -566,3 +566,20 @@ PRINT 'TOTAL: 8 TRIGGERS AUTOMATIZADOS';
 PRINT '============================================================================';
 
 GO
+
+
+
+DISABLE TRIGGER trg_ValidarStockAntesVenta ON Ventas;
+GO
+
+
+SELECT 
+     name AS TriggerName,
+        OBJECT_NAME(parent_id) AS TableName,
+        is_disabled
+    FROM sys.triggers 
+    WHERE parent_id = OBJECT_ID('Ventas');
+
+
+
+    DROP TRIGGER IF EXISTS trg_ValidarStockAntesVenta;

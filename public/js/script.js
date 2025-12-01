@@ -11,7 +11,8 @@ function getSessionId() {
   return sessionId;
 }
 
-function getAuthToken() {
+// NOTA: Cambiado de 'authToken' a 'token' para consistencia con el resto del proyecto
+function getToken() {
   return localStorage.getItem('authToken');
 }
 
@@ -21,7 +22,7 @@ function getUsuario() {
 }
 
 function isAuthenticated() {
-  return getAuthToken() !== null;
+  return getToken() !== null;
 }
 
 // =============================================
@@ -30,7 +31,7 @@ function isAuthenticated() {
 document.addEventListener('DOMContentLoaded', async () => {
   const sessionId = getSessionId();
 
-  actualizarHeaderUI();
+  actualizarHeaderUI(); // Esta función ahora maneja todo el contenido del header-actions
   await cargarMarcas();
   await cargarProductosDestacados();
   await cargarCarrito();
@@ -42,47 +43,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 // =============================================
 function actualizarHeaderUI() {
   const usuario = getUsuario();
-  const headerActions = document.querySelector('.header-actions');
+  const headerActions = document.querySelector('.header-actions'); // Obtener el contenedor
+
+  let headerHtml = `
+    <button id="btn-carrito" class="btn-login">
+      🛒 Carrito <span id="cart-count" class="cart-count">0</span>
+    </button>
+  `;
 
   if (usuario) {
-    headerActions.innerHTML = `
+    // Si el usuario está logeado
+    headerHtml += `
       <span class="user-name">¡Hola, ${usuario.nombre}! 👋</span>
-      <button id="btn-carrito" class="btn-login">
-        🛒 Carrito <span id="cart-count" class="cart-count">0</span>
-      </button>
+      <a href="perfil.html" class="btn-login" id="btn-mi-perfil">👤 Mi Perfil</a>
       <button id="btn-mis-compras" class="btn-login">📦 Mis Compras</button>
-      ${usuario.rolID === 1 ? '<button id="btn-admin" class="btn-login">⚙️ Admin</button>' : ''}
-      <button id="btn-logout" class="btn-login">🚪 Cerrar Sesión</button>
+      ${usuario.rolID === 1 ? '<a href="admin.html" class="btn-login">⚙️ Admin</a>' : ''}
+      <button id="btn-cerrar-sesion" class="btn-primary">🚪 Cerrar Sesión</button>
     `;
-
-    const formContainer = document.querySelector('.form-container');
-    if (formContainer) {
-      formContainer.style.display = 'none';
-    }
-
-    document.getElementById('btn-carrito').addEventListener('click', mostrarCarrito);
-    document.getElementById('btn-mis-compras').addEventListener('click', () => {
-      window.location.href = 'historial.html';
-    });
-    document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
-
-    if (usuario.rolID === 1) {
-      document.getElementById('btn-admin').addEventListener('click', () => {
-        window.location.href = 'admin.html';
-      });
-    }
   } else {
-    const btnCarrito = document.getElementById('btn-carrito');
-    if (btnCarrito) {
-      btnCarrito.addEventListener('click', mostrarCarrito);
-    }
+    // Si el usuario no está logeado, solo mostrar "Iniciar Sesión"
+    headerHtml += `
+      <a href="login.html" class="btn-primary" id="btn-iniciar-sesion">Iniciar Sesión</a>
+    `;
   }
 
-  cargarCarrito();
+  headerActions.innerHTML = headerHtml; // Actualizar el HTML del contenedor
+
+  // Re-adjuntar listeners, ya que el innerHTML los elimina
+  document.getElementById('btn-carrito').addEventListener('click', mostrarCarrito);
+
+  if (usuario) {
+    document.getElementById('btn-mis-compras').addEventListener('click', () => {
+        window.location.href = 'historial.html';
+    });
+    document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
+    
+    if (usuario.rolID === 1) {
+        const btnAdmin = document.querySelector('.header-actions a[href="admin.html"]');
+        if (btnAdmin) { // Asegurarse de que el elemento existe antes de añadir el listener
+            btnAdmin.addEventListener('click', () => {
+                window.location.href = 'admin.html';
+            });
+        }
+    }
+  }
 }
 
 function cerrarSesion() {
-  localStorage.removeItem('authToken');
+  localStorage.removeItem('authToken'); // Corregido a 'authToken'
   localStorage.removeItem('usuario');
   window.location.href = 'index.html';
 }

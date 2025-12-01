@@ -607,11 +607,7 @@ GO
 -- CATEGORÍA 4: GESTIÓN DE VENTAS
 -- =============================================
 
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearVenta')
-    DROP PROCEDURE sp_CrearVenta;
-GO
-
-CREATE PROCEDURE sp_CrearVenta
+ALTER PROCEDURE sp_CrearVenta
     @ClienteID INT,
     @DireccionEnvioID INT,
     @MetodoPagoID INT,
@@ -622,152 +618,76 @@ CREATE PROCEDURE sp_CrearVenta
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-    
-    DECLARE @Reintentos INT = 0;
-    DECLARE @MaxReintentos INT = 3;
-    DECLARE @Exitoso BIT = 0;
-    
-    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
-    BEGIN
-        SET @Reintentos = @Reintentos + 1;
-        
-        BEGIN TRY
-            BEGIN TRANSACTION;
-            
-            DECLARE @VentaID INT;
-            DECLARE @NumeroFactura NVARCHAR(50);
-            DECLARE @SubtotalVentaBs DECIMAL(12,2) = 0;
-            DECLARE @DescuentoPromocionBs DECIMAL(12,2) = 0;
-            DECLARE @DescuentoCuponBs DECIMAL(12,2) = 0;
-            DECLARE @TotalVentaBs DECIMAL(12,2) = 0;
-            
-            DECLARE @NumeroSecuencial INT;
-            SELECT @NumeroSecuencial = ISNULL(MAX(CAST(SUBSTRING(NumeroFactura, 10, 10) AS INT)), 0) + 1
-            FROM Ventas WITH (TABLOCKX, HOLDLOCK)
-            WHERE NumeroFactura LIKE 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '%';
-            
-            SET @NumeroFactura = 'SCZ-' + FORMAT(GETDATE(), 'yyyyMMdd') + '-' + FORMAT(@NumeroSecuencial, '0000');
-            
-            CREATE TABLE #TempDetalles (
-                ProductoID INT,
-                Cantidad INT,
-                PrecioUnitarioBs DECIMAL(10,2),
-                DescuentoBs DECIMAL(10,2),
-                SubtotalBs DECIMAL(12,2)
-            );
-            
-            INSERT INTO #TempDetalles (ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
-            SELECT 
-                j.ProductoID,
-                j.Cantidad,
-                p.PrecioVentaBs,
-                0,
-                j.Cantidad * p.PrecioVentaBs
-            FROM OPENJSON(@DetallesJSON) WITH (ProductoID INT, Cantidad INT) AS j
-            INNER JOIN Productos p WITH (UPDLOCK, HOLDLOCK) ON p.ProductoID = j.ProductoID
-            WHERE p.Activo = 1;
-            
-            IF EXISTS (
-                SELECT 1 FROM #TempDetalles t
-                INNER JOIN Productos p WITH (UPDLOCK, HOLDLOCK) ON t.ProductoID = p.ProductoID
-                WHERE p.StockActual < t.Cantidad
-            )
-            BEGIN
-                DECLARE @ProductosSinStock NVARCHAR(MAX);
-                SELECT @ProductosSinStock = STRING_AGG(
-                    p.NombreProducto + ' (disponible: ' + CAST(p.StockActual AS NVARCHAR) + ', solicitado: ' + CAST(t.Cantidad AS NVARCHAR) + ')', 
-                    ', '
-                )
-                FROM #TempDetalles t
-                INNER JOIN Productos p ON t.ProductoID = p.ProductoID
-                WHERE p.StockActual < t.Cantidad;
-                
-                DECLARE @MensajeError NVARCHAR(500) = 'Stock insuficiente para: ' + @ProductosSinStock;
-                RAISERROR(@MensajeError, 16, 1);
-            END
-            
-            SELECT @SubtotalVentaBs = SUM(SubtotalBs) FROM #TempDetalles;
-            
-            IF @CuponID IS NOT NULL
-            BEGIN
-                DECLARE @TipoDescuento NVARCHAR(20), @ValorDescuento DECIMAL(10,2), @MontoMin DECIMAL(10,2);
-                DECLARE @UsosActuales INT, @UsosMaximos INT;
-                
-                SELECT 
-                    @TipoDescuento = TipoDescuento,
-                    @ValorDescuento = ValorDescuento,
-                    @MontoMin = MontoMinCompra,
-                    @UsosActuales = UsosActuales,
-                    @UsosMaximos = UsosMaximos
-                FROM Cupones WITH (UPDLOCK, HOLDLOCK)
-                WHERE CuponID = @CuponID AND Activo = 1;
-                
-                IF @UsosActuales >= @UsosMaximos
-                    RAISERROR('El cupón ha alcanzado el máximo de usos', 16, 1);
-                
-                IF @SubtotalVentaBs < @MontoMin
-                    RAISERROR('El monto de compra no alcanza el mínimo requerido para el cupón', 16, 1);
-                
-                IF @TipoDescuento = 'PORCENTAJE'
-                    SET @DescuentoCuponBs = @SubtotalVentaBs * (@ValorDescuento / 100);
-                ELSE IF @TipoDescuento = 'MONTO_FIJO'
-                    SET @DescuentoCuponBs = @ValorDescuento;
-            END
-            
-            SET @TotalVentaBs = @SubtotalVentaBs - @DescuentoPromocionBs - @DescuentoCuponBs;
-            
-            INSERT INTO Ventas (NumeroFactura, ClienteID, DireccionEnvioID, SubtotalVentaBs, DescuentoPromocionBs, DescuentoCuponBs, TotalVentaBs, MetodoPagoID, EstadoID, CuponID, Observaciones)
-            VALUES (@NumeroFactura, @ClienteID, @DireccionEnvioID, @SubtotalVentaBs, @DescuentoPromocionBs, @DescuentoCuponBs, @TotalVentaBs, @MetodoPagoID, 1, @CuponID, @Observaciones);
-            
-            SET @VentaID = SCOPE_IDENTITY();
-            
-            INSERT INTO DetalleVentas (VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs)
-            SELECT @VentaID, ProductoID, Cantidad, PrecioUnitarioBs, DescuentoBs, SubtotalBs FROM #TempDetalles;
-            
-            UPDATE p
-            SET p.StockActual = p.StockActual - t.Cantidad
-            FROM Productos p
-            INNER JOIN #TempDetalles t ON p.ProductoID = t.ProductoID;
-            
-            INSERT INTO MovimientosStock (ProductoID, TipoMovimientoID, Cantidad, StockAnterior, StockNuevo, UsuarioID, ReferenciaTabla, ReferenciaID, Observaciones)
-            SELECT t.ProductoID, 1, t.Cantidad, p.StockActual + t.Cantidad, p.StockActual, @UsuarioID, 'Ventas', @VentaID, 'Venta - ' + @NumeroFactura
-            FROM #TempDetalles t
-            INNER JOIN Productos p ON t.ProductoID = p.ProductoID;
-            
-            INSERT INTO HistorialEstadoPedido (VentaID, EstadoID, UsuarioID, Comentario)
-            VALUES (@VentaID, 1, @UsuarioID, 'Venta creada');
-            
-            IF @CuponID IS NOT NULL
-                UPDATE Cupones SET UsosActuales = UsosActuales + 1 WHERE CuponID = @CuponID;
-            
-            DROP TABLE #TempDetalles;
-            
-            COMMIT TRANSACTION;
-            SET @Exitoso = 1;
-            
-            SELECT @VentaID AS VentaID, @NumeroFactura AS NumeroFactura, @TotalVentaBs AS TotalVentaBs, 'Venta creada exitosamente' AS Mensaje;
-            
-        END TRY
-        BEGIN CATCH
-            IF @@TRANCOUNT > 0
-                ROLLBACK TRANSACTION;
-            
-            IF OBJECT_ID('tempdb..#TempDetalles') IS NOT NULL
-                DROP TABLE #TempDetalles;
-            
-            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
-            BEGIN
-                PRINT 'Deadlock en sp_CrearVenta, reintento ' + CAST(@Reintentos AS NVARCHAR);
-                WAITFOR DELAY '00:00:01';
-                CONTINUE;
-            END;
-            
-            THROW;
-        END CATCH
-    END
+    SET XACT_ABORT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @Detalles TABLE (ProductoID INT, Cantidad INT);
+        INSERT INTO @Detalles (ProductoID, Cantidad)
+        SELECT JSON_Value(value, '$.ProductoID'), JSON_Value(value, '$.Cantidad')
+        FROM OPENJSON(@DetallesJSON);
+
+        DECLARE @SubtotalVenta DECIMAL(12, 2) = 0;
+        DECLARE @ItemsVenta TABLE (ProductoID INT, Cantidad INT, PrecioUnitario DECIMAL(10, 2), StockActual INT);
+
+        INSERT INTO @ItemsVenta (ProductoID, Cantidad, PrecioUnitario, StockActual)
+        SELECT d.ProductoID, d.Cantidad, p.PrecioVentaBs, p.StockActual
+        FROM @Detalles d INNER JOIN Productos p ON d.ProductoID = p.ProductoID;
+
+        IF EXISTS (SELECT 1 FROM @ItemsVenta WHERE Cantidad > StockActual)
+        BEGIN
+            ;THROW 50001, 'No hay stock suficiente para uno o más productos.', 1;
+        END
+
+        SELECT @SubtotalVenta = SUM(Cantidad * PrecioUnitario) FROM @ItemsVenta;
+        DECLARE @TotalVenta DECIMAL(12, 2) = @SubtotalVenta;
+        DECLARE @NumeroFactura NVARCHAR(50) = 'FAC-' + FORMAT(GETDATE(), 'yyyyMMdd') + '-' + CAST(NEXT VALUE FOR Seq_NumeroFactura AS NVARCHAR(10));
+        DECLARE @EstadoInicialID INT = 1;
+
+        INSERT INTO Ventas (
+            NumeroFactura, ClienteID, DireccionEnvioID, FechaVenta,
+            SubtotalVentaBs, TotalVentaBs, MetodoPagoID, EstadoID,
+            CuponID, Observaciones
+        )
+        VALUES (
+            @NumeroFactura, @ClienteID, @DireccionEnvioID, GETDATE(),
+            @SubtotalVenta, @TotalVenta, @MetodoPagoID, @EstadoInicialID,
+            @CuponID, @Observaciones
+        );
+
+        DECLARE @NuevaVentaID INT;
+        SET @NuevaVentaID = SCOPE_IDENTITY();
+
+        IF @NuevaVentaID IS NULL
+        BEGIN
+            ;THROW 50002, 'Error Crítico: No se pudo generar el VentaID. Esto puede ser causado por un TRIGGER en la tabla Ventas.', 1;
+        END
+
+        INSERT INTO DetalleVentas (VentaID, ProductoID, Cantidad, PrecioUnitarioBs, SubtotalBs)
+        SELECT @NuevaVentaID, iv.ProductoID, iv.Cantidad, iv.PrecioUnitario, iv.Cantidad * iv.PrecioUnitario
+        FROM @ItemsVenta iv;
+
+        UPDATE p
+        SET p.StockActual = p.StockActual - iv.Cantidad
+        FROM Productos p INNER JOIN @ItemsVenta iv ON p.ProductoID = iv.ProductoID;
+
+        INSERT INTO HistorialEstadoPedido (VentaID, EstadoID, FechaCambio, UsuarioID, Comentario)
+        VALUES (@NuevaVentaID, @EstadoInicialID, GETDATE(), @UsuarioID, 'Pedido creado.');
+
+        COMMIT TRANSACTION;
+
+        SELECT @NuevaVentaID AS VentaID, @NumeroFactura AS NumeroFactura, @TotalVenta AS TotalVentaBs;
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        ;THROW;
+    END CATCH
 END
 GO
+
 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CambiarEstadoVenta')
     DROP PROCEDURE sp_CambiarEstadoVenta;
@@ -1892,4 +1812,74 @@ GO
 
 
 
-exec sp_ObtenerCategoriasConProductos
+
+-- Verificar y Eliminar si existe
+IF OBJECT_ID('sp_ObtenerPerfilUsuario', 'P') IS NOT NULL
+    DROP PROCEDURE sp_ObtenerPerfilUsuario;
+GO
+
+/*
+  Propósito: Obtener todos los datos del perfil de un usuario (Admin, Cliente Persona o Cliente Empresa)
+             basado en su email. Útil para el login y dashboard.
+*/
+CREATE PROCEDURE sp_ObtenerPerfilUsuario
+(
+    @Email NVARCHAR(100)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        -- Datos de Cuenta
+        U.UsuarioID,
+        U.Email,
+        R.NombreRol AS Rol,
+        U.Activo AS CuentaActiva,
+        U.FechaRegistro,
+
+        -- Datos de Cliente (si aplica)
+        C.ClienteID,
+        C.TipoCliente,
+        C.NumeroDocumento,
+        C.TipoDocumento,
+        C.Telefono,
+
+        -- Datos de Persona (si es Cliente Persona o Empleado)
+        P.Nombres,
+        P.PrimerApellido,
+        P.SegundoApellido,
+        CONCAT(P.Nombres, ' ', P.PrimerApellido, ' ', ISNULL(P.SegundoApellido, '')) AS NombreCompleto,
+
+        -- Datos de Empresa (si es Cliente Empresa)
+        E.RazonSocial,
+        E.RepresentanteLegal,
+        
+        -- Determinar el nombre a mostrar en la UI (Nombre Persona o Razón Social)
+        COALESCE(E.RazonSocial, CONCAT(P.Nombres, ' ', P.PrimerApellido), 'Usuario Sistema') AS NombreDisplay
+
+    FROM 
+        Usuarios U
+    INNER JOIN 
+        Roles R ON U.RolID = R.RolID
+    -- Unimos con Clientes (puede ser NULL si es un admin sin perfil de cliente)
+    LEFT JOIN 
+        Clientes C ON U.UsuarioID = C.UsuarioID
+    -- Unimos con Personas (si existe el registro en Clientes y es tipo Persona)
+    LEFT JOIN 
+        Personas P ON C.ClienteID = P.ClienteID
+    -- Unimos con Empresas (si existe el registro en Clientes y es tipo Empresa)
+    LEFT JOIN 
+        Empresas E ON C.ClienteID = E.ClienteID
+    
+    WHERE 
+        U.Email = @Email;
+END
+GO
+
+
+
+CREATE SEQUENCE Seq_NumeroFactura AS INT
+       START WITH 1
+       INCREMENT BY 1;
+   GO

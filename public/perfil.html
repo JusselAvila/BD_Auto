@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Avila's Tyre Company</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <a href="index.html" style="text-decoration: none; color: inherit;">
+                    <h1>🚗 Avila's Tyre Company</h1>
+                </a>
+                <p class="header-subtitle">Santa Cruz de la Sierra, Bolivia</p>
+            </div>
+            <div class="header-actions">
+                <a href="index.html" class="btn-login">🏠 Inicio</a>
+            </div>
+        </header>
+
+        <main class="form-container">
+            <div class="card">
+                <h2>Mi Perfil</h2>
+                <p>Actualiza tu información personal y de envío.</p>
+
+                <form id="form-perfil-usuario">
+                    <h3>Información Personal</h3>
+                    <div class="campo">
+                        <label for="perfil-nombre">Nombre Completo</label>
+                        <input type="text" id="perfil-nombre" required>
+                    </div>
+                    <div class="campo">
+                        <label for="perfil-email">Correo Electrónico</label>
+                        <input type="email" id="perfil-email" disabled>
+                        <small>El correo no se puede modificar.</small>
+                    </div>
+                    <div class="campo">
+                        <label for="perfil-telefono">Teléfono</label>
+                        <input type="tel" id="perfil-telefono">
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">Actualizar Información</button>
+                </form>
+
+                <hr style="margin: 2rem 0;">
+
+                <form id="form-perfil-direccion">
+                    <h3>Mi Dirección de Envío</h3>
+                    <div id="direccion-existente" style="display: none;">
+                        <p><strong>Dirección Actual:</strong></p>
+                        <p id="direccion-texto"></p>
+                        <button type="button" id="btn-cambiar-direccion" class="btn-secondary btn-block">Cambiar Dirección</button>
+                    </div>
+
+                    <div id="formulario-nueva-direccion" style="display: none;">
+                        <input type="hidden" id="direccion-id">
+
+                        <div class="campo">
+                            <label for="nombre-direccion">Nombre de la Dirección (ej: "Casa", "Oficina")</label>
+                            <input type="text" id="nombre-direccion" required>
+                        </div>
+                        <div class="campo">
+                            <label for="perfil-departamento">Departamento</label>
+                            <select id="perfil-departamento" required>
+                                <option value="">Seleccione un departamento</option>
+                            </select>
+                        </div>
+                        <div class="campo">
+                            <label for="perfil-ciudad">Ciudad</label>
+                            <select id="perfil-ciudad" required disabled>
+                                <option value="">Seleccione un departamento primero</option>
+                            </select>
+                        </div>
+                        <div class="campo">
+                            <label for="direccion-calle">Calle y Número</label>
+                            <input type="text" id="direccion-calle" required>
+                        </div>
+                        <div class="campo">
+                            <label for="direccion-zona">Zona (Opcional)</label>
+                            <input type="text" id="direccion-zona">
+                        </div>
+                        <div class="campo">
+                            <label for="direccion-referencia">Referencia (ej: "Frente al parque")</label>
+                            <textarea id="direccion-referencia" rows="3"></textarea>
+                        </div>
+                        <div class="campo-checkbox">
+                            <input type="checkbox" id="direccion-es-principal">
+                            <label for="direccion-es-principal">Establecer como dirección principal</label>
+                        </div>
+                        <button type="submit" class="btn-primary btn-block">Guardar Dirección</button>
+                        <button type="button" id="btn-cancelar-direccion" class="btn-secondary btn-block">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <footer
+            style="background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); color: white; text-align: center; padding: 30px; margin-top: 40px; border-radius: 20px;">
+            <p>© 2024 Avila's Tyre Company - Todos los derechos reservados</p>
+        </footer>
+    </div>
+
+    <script src="js/perfil.js"></script>
+</body>
+
+</html>
