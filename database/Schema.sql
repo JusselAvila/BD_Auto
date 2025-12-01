@@ -117,12 +117,15 @@ CREATE TABLE Marcas (
 );
 
 
+
+
+
 CREATE TABLE Productos (
     ProductoID INT PRIMARY KEY IDENTITY(1,1),
     CodigoProducto NVARCHAR(50) NOT NULL UNIQUE,
     NombreProducto NVARCHAR(200) NOT NULL,
     Descripcion NVARCHAR(1000),
-    CategoriaID INT NOT NULL,
+    CategoriaID INT NULL,
     MarcaID INT NULL,
     Ancho INT NULL,
     Perfil INT NULL,
@@ -133,7 +136,6 @@ CREATE TABLE Productos (
     PrecioVentaBs DECIMAL(10,2) NOT NULL,
     StockMinimo INT DEFAULT 5,
     StockActual INT DEFAULT 0,
-    ImagenPrincipalURL NVARCHAR(500) NULL,
     Activo BIT DEFAULT 1,
     Destacado BIT DEFAULT 0,
     FechaCreacion DATETIME DEFAULT GETDATE(),

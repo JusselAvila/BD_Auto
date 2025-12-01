@@ -10,16 +10,13 @@
 </head>
 
 <body>
-
     <div class="container">
         <div class="admin-wrapper">
-            <!-- SIDEBAR -->
             <aside class="admin-sidebar">
                 <div class="sidebar-header">
                     <h2>🎛️ Admin Panel</h2>
                     <p id="admin-name">Cargando...</p>
                 </div>
-
                 <nav class="sidebar-nav">
                     <a href="admin.html" class="nav-item">
                         <span class="nav-icon">📊</span>
@@ -49,14 +46,12 @@
                 </nav>
             </aside>
 
-            <!-- MAIN CONTENT -->
             <main class="admin-main">
                 <header class="admin-header">
                     <h1>📦 Gestión de Productos</h1>
                     <button class="btn-primary" id="btn-nuevo-producto">➕ Nuevo Producto</button>
                 </header>
 
-                <!-- SEARCH AND FILTERS -->
                 <div class="admin-section">
                     <div class="search-bar">
                         <input type="text" class="search-input" id="search-productos"
@@ -73,7 +68,6 @@
                     </div>
                 </div>
 
-                <!-- PRODUCTS TABLE -->
                 <div class="admin-section">
                     <div class="table-container">
                         <table class="admin-table" id="productos-table">
@@ -91,7 +85,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="8" style="text-align: center; padding: 40px;" id="loading-productos">
+                                    <td colspan="8" style="text-align: center; padding: 40px;">
                                         <div class="spinner"></div>
                                         <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando productos...
                                         </p>
@@ -115,67 +109,63 @@
             <div class="admin-modal-body">
                 <form id="form-producto">
                     <input type="hidden" id="producto-id" name="productoID">
-
                     <div class="form-grid">
                         <div class="campo">
                             <label for="producto-codigo">Código del Producto *</label>
                             <input type="text" id="producto-codigo" name="codigoProducto" required>
                         </div>
-
                         <div class="campo">
                             <label for="producto-nombre">Nombre del Producto *</label>
                             <input type="text" id="producto-nombre" name="nombreProducto" required>
                         </div>
-
                         <div class="campo">
-                            <label for="producto-categoria">Categoría *</label>
-                            <select id="producto-categoria" name="categoriaID" required>
+                            <label for="producto-categoria-id">Categoría *</label>
+                            <select id="producto-categoria-id" name="categoriaID" required>
                                 <option value="">Seleccionar...</option>
                             </select>
                         </div>
-
                         <div class="campo">
-                            <label for="producto-marca">Marca *</label>
-                            <select id="producto-marca" name="marcaID" required>
+                            <label for="producto-marca-id">Marca</label>
+                            <select id="producto-marca-id" name="marcaID">
                                 <option value="">Seleccionar...</option>
                             </select>
                         </div>
-
                         <div class="campo">
                             <label for="producto-precio-compra">Precio Compra (Bs) *</label>
                             <input type="number" id="producto-precio-compra" name="precioCompraBs" step="0.01" required>
                         </div>
-
                         <div class="campo">
                             <label for="producto-precio-venta">Precio Venta (Bs) *</label>
                             <input type="number" id="producto-precio-venta" name="precioVentaBs" step="0.01" required>
                         </div>
-
                         <div class="campo">
-                            <label for="producto-stock">Stock Actual *</label>
-                            <input type="number" id="producto-stock" name="stockActual" min="0" required>
+                            <label for="producto-stock-actual">Stock Actual *</label>
+                            <input type="number" id="producto-stock-actual" name="stockActual" min="0" required>
                         </div>
-
                         <div class="campo">
                             <label for="producto-stock-minimo">Stock Mínimo *</label>
                             <input type="number" id="producto-stock-minimo" name="stockMinimo" min="0" required>
                         </div>
-
                         <div class="campo">
                             <label for="producto-ancho">Ancho (mm)</label>
                             <input type="number" id="producto-ancho" name="ancho">
                         </div>
-
                         <div class="campo">
                             <label for="producto-perfil">Perfil</label>
                             <input type="number" id="producto-perfil" name="perfil">
                         </div>
-
                         <div class="campo">
-                            <label for="producto-diametro">Diámetro Rin (pulgadas)</label>
-                            <input type="number" id="producto-diametro" name="diametroRin" step="0.1">
+                            <label for="producto-diametro-rin">Diámetro Rin (pulgadas)</label>
+                            <input type="number" id="producto-diametro-rin" name="diametroRin" step="0.1">
                         </div>
-
+                        <div class="campo">
+                            <label for="producto-indice-carga">Índice de Carga</label>
+                            <input type="text" id="producto-indice-carga" name="indiceCarga" maxlength="10">
+                        </div>
+                        <div class="campo">
+                            <label for="producto-indice-velocidad">Índice de Velocidad</label>
+                            <input type="text" id="producto-indice-velocidad" name="indiceVelocidad" maxlength="5">
+                        </div>
                         <div class="campo">
                             <label for="producto-destacado">
                                 <input type="checkbox" id="producto-destacado" name="destacado"
@@ -184,12 +174,10 @@
                             </label>
                         </div>
                     </div>
-
                     <div class="campo" style="grid-column: 1 / -1;">
                         <label for="producto-descripcion">Descripción</label>
                         <textarea id="producto-descripcion" name="descripcion" rows="4"></textarea>
                     </div>
-
                     <div class="form-actions">
                         <button type="button" class="btn-secondary"
                             onclick="closeModal('modal-producto')">Cancelar</button>
@@ -200,53 +188,8 @@
         </div>
     </div>
 
-    <!-- MODAL UPDATE STOCK -->
-    <div id="modal-stock" class="admin-modal">
-        <div class="admin-modal-content">
-            <div class="admin-modal-header">
-                <h2>Actualizar Stock</h2>
-                <button class="btn-close" onclick="closeModal('modal-stock')">&times;</button>
-            </div>
-            <div class="admin-modal-body">
-                <form id="form-stock">
-                    <input type="hidden" id="stock-producto-id">
-
-                    <div class="campo">
-                        <label>Producto</label>
-                        <p id="stock-producto-nombre" style="font-weight: 600; color: white;"></p>
-                    </div>
-
-                    <div class="campo">
-                        <label>Stock Actual</label>
-                        <p id="stock-actual" style="font-size: 1.5rem; font-weight: 700; color: var(--primary-light);">
-                        </p>
-                    </div>
-
-                    <div class="campo">
-                        <label for="stock-cantidad">Ajuste de Stock *</label>
-                        <input type="number" id="stock-cantidad" name="cantidad" required>
-                        <small style="color: rgba(255,255,255,0.6); margin-top: 5px;">Usar números negativos para
-                            reducir stock</small>
-                    </div>
-
-                    <div class="campo">
-                        <label for="stock-observacion">Observación</label>
-                        <textarea id="stock-observacion" name="observacion" rows="3"></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary"
-                            onclick="closeModal('modal-stock')">Cancelar</button>
-                        <button type="submit" class="btn-success">Actualizar Stock</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <script src="js/admin-common.js"></script>
     <script src="js/admin-productos.js"></script>
-
 </body>
 
 </html>

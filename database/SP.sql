@@ -194,6 +194,7 @@ GO
 
 select * from Vehiculo_Marcas
 
+
 ALTER PROCEDURE sp_ObtenerMarcasVehiculos
 AS
 BEGIN

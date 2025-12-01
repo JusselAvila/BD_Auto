@@ -142,6 +142,8 @@ SET IDENTITY_INSERT Ciudades OFF;
 PRINT 'Insertando usuarios de prueba...';
 GO
 
+select * from Usuarios
+
 -- Usuario Admin (password: admin123)
 SET IDENTITY_INSERT Usuarios ON;
 INSERT INTO Usuarios (UsuarioID, Email, PasswordHash, RolID, Activo) VALUES

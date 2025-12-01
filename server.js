@@ -135,7 +135,7 @@ app.post('/api/registro/persona', async (req, res) => {
       .input('Nombres', sql.NVarChar(100), nombres)
       .input('ApellidoPaterno', sql.NVarChar(100), apellidoPaterno)
       .input('ApellidoMaterno', sql.NVarChar(100), apellidoMaterno || null)
-      .input('CI', sql.NVarChar(20), ci)  // ⚠️ Cambiar a 'CI' (no 'NumeroCI')
+      .input('CI', sql.NVarChar(20), ci)
       .input('Telefono', sql.NVarChar(20), telefono || null)
       .input('FechaNacimiento', sql.Date, fechaNacimiento || null)
       .execute('sp_CrearClientePersona');
@@ -175,7 +175,7 @@ app.post('/api/registro/empresa', async (req, res) => {
       .input('NombreComercial', sql.NVarChar(255), nombreComercial || null)
       .input('NIT', sql.NVarChar(20), nit)
       .input('Telefono', sql.NVarChar(20), telefono || null)
-      .execute('sp_RegistrarUsuarioEmpresa');
+      .execute('sp_CrearClienteEmpresa');
 
     const { UsuarioID, ClienteID } = result.recordset[0];
 
@@ -297,14 +297,11 @@ app.get('/api/ciudades/:departamentoID', async (req, res) => {
 // Obtener marcas de vehículos
 app.get('/api/vehiculos/marcas', async (req, res) => {
   try {
-    console.log('🔍 Ejecutando sp_ObtenerMarcasVehiculos');
-
     const result = await sqlPool.request()
       .execute('sp_ObtenerMarcasVehiculos');
-
     res.json(result.recordset);
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error('Error obteniendo marcas:', err);
     res.status(500).json({ error: 'Error al obtener marcas' });
   }
 });
@@ -355,7 +352,7 @@ app.get('/api/productos/compatibles/:versionID', async (req, res) => {
           p.Ancho,
           p.Perfil,
           p.DiametroRin,
-          p.ImagenPrincipalURL,
+
           c.NombreCategoria,
           m.NombreMarca,
           lc.Posicion,
@@ -388,7 +385,6 @@ app.get('/api/productos/destacados', async (req, res) => {
           p.Descripcion,
           p.PrecioVentaBs,
           p.StockActual,
-          p.ImagenPrincipalURL,
           c.NombreCategoria,
           m.NombreMarca
         FROM Productos p
@@ -789,6 +785,244 @@ app.get('/api/metodos-pago', async (req, res) => {
   }
 });
 
+app.get('/api/productos', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerProductosCatalogo');
+
+    // Los resultados ya están filtrados por la VIEW y el SP
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error('Error obteniendo productos del catálogo:', err);
+    // Usamos 500 para error interno del servidor
+    res.status(500).json({ error: 'No se pudo cargar el catálogo de productos.' });
+  }
+});
+
+
+app.get('/api/admin/categorias', async (req, res) => {
+  // [Aquí debe ir su middleware de checkAdminAuth]
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerCategoriasConProductos');
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo todas las categorías:', err);
+    res.status(500).json({ error: 'Error al obtener la lista de categorías.' });
+  }
+});
+
+
+// En server.js
+
+// 1. ENDPOINT PARA CARGAR LA TABLA PRINCIPAL DE CLIENTES
+app.get('/api/admin/clientes', async (req, res) => {
+  // Middleware de seguridad
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerClientesAdmin');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo clientes para admin:', err);
+    res.status(500).json({ error: 'Error al cargar la lista de clientes.' });
+  }
+});
+
+// 2. ENDPOINT PARA CARGAR EL HISTORIAL DE UN CLIENTE ESPECÍFICO
+app.get('/api/admin/clientes/:clienteID/historial', async (req, res) => {
+  // Middleware de seguridad
+  const clienteID = req.params.clienteID;
+  try {
+    const result = await sqlPool.request()
+      .input('ClienteID', sql.Int, clienteID) // Pasa el parámetro al SP
+      .execute('sp_ObtenerHistorialVentasCliente');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(`Error obteniendo historial para ClienteID ${clienteID}:`, err);
+    res.status(500).json({ error: 'Error al cargar el historial de ventas.' });
+  }
+});
+
+app.post('/api/admin/productos', async (req, res) => {
+  // NOTA: Aquí debería haber un middleware de autenticación y autorización (Admin)
+  try {
+    const {
+      CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID,
+      PrecioCompraBs, PrecioVentaBs, StockActual, StockMinimo,
+      Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad,
+      Destacado, UsuarioID
+    } = req.body;
+
+    // Validación básica de campos obligatorios
+    if (!CodigoProducto || !NombreProducto || PrecioCompraBs === undefined || PrecioVentaBs === undefined || StockActual === undefined || StockMinimo === undefined || Destacado === undefined || UsuarioID === undefined) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios para el producto.' });
+    }
+
+    const request = sqlPool.request();
+
+    // Mapeo de parámetros al Stored Procedure
+    request.input('CodigoProducto', sql.NVarChar(50), CodigoProducto);
+    request.input('NombreProducto', sql.NVarChar(200), NombreProducto);
+    request.input('Descripcion', sql.NVarChar(1000), Descripcion);
+
+    // IDs opcionales (pueden ser NULL)
+    request.input('CategoriaID', sql.Int, CategoriaID || null);
+    request.input('MarcaID', sql.Int, MarcaID || null);
+
+    // Valores numéricos
+    request.input('PrecioCompraBs', sql.Decimal(10, 2), PrecioCompraBs);
+    request.input('PrecioVentaBs', sql.Decimal(10, 2), PrecioVentaBs);
+    request.input('StockActual', sql.Int, StockActual);
+    request.input('StockMinimo', sql.Int, StockMinimo);
+
+    // Parámetros de Llanta (opcionales - INT y NVARCHAR)
+    request.input('Ancho', sql.Int, Ancho || null);
+    request.input('Perfil', sql.Int, Perfil || null);
+    request.input('DiametroRin', sql.Int, DiametroRin || null);
+    request.input('IndiceCarga', sql.NVarChar(10), IndiceCarga || null);
+    request.input('IndiceVelocidad', sql.NVarChar(5), IndiceVelocidad || null);
+
+    // Parámetros Adicionales
+    request.input('Destacado', sql.Bit, Destacado);
+    request.input('UsuarioID', sql.Int, UsuarioID); // Asumiendo que el ID del usuario que realiza el cambio se pasa
+
+    // Ejecutar el procedimiento
+    const result = await request.execute('sp_CrearOActualizarProducto2');
+
+    // El SP devuelve el ProductoID y la Operacion ('CREADO' o 'ACTUALIZADO')
+    const productoInfo = result.recordset[0];
+
+    res.status(200).json({
+      message: `Producto ${productoInfo.Operacion.toLowerCase()} con éxito.`,
+      productoID: productoInfo.ProductoID,
+      operacion: productoInfo.Operacion
+    });
+
+  } catch (err) {
+    console.error('Error al crear/actualizar producto:', err);
+    res.status(500).json({ error: 'Error en el servidor al procesar la solicitud del producto.' });
+  }
+});
+
+// Obtener todos los productos (Admin)
+app.get('/api/admin/productos', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT 
+          p.ProductoID,
+          p.CodigoProducto,
+          p.NombreProducto,
+          p.Descripcion,
+          p.CategoriaID,
+          c.NombreCategoria,
+          p.MarcaID,
+          m.NombreMarca,
+          p.PrecioCompraBs,
+          p.PrecioVentaBs,
+          p.StockActual,
+          p.StockMinimo,
+          p.Ancho,
+          p.Perfil,
+          p.DiametroRin,
+          p.IndiceCarga,
+          p.IndiceVelocidad,
+          p.Destacado,
+          p.Activo
+        FROM Productos p
+        LEFT JOIN Categorias c ON p.CategoriaID = c.CategoriaID
+        LEFT JOIN Marcas m ON p.MarcaID = m.MarcaID
+        WHERE p.Activo = 1
+        ORDER BY p.ProductoID DESC
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo productos:', err);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+});
+
+// Obtener un producto específico (Admin)
+app.get('/api/admin/productos/:id', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .input('ProductoID', sql.Int, req.params.id)
+      .query(`
+        SELECT 
+          p.ProductoID,
+          p.CodigoProducto,
+          p.NombreProducto,
+          p.Descripcion,
+          p.CategoriaID,
+          p.MarcaID,
+          p.PrecioCompraBs,
+          p.PrecioVentaBs,
+          p.StockActual,
+          p.StockMinimo,
+          p.Ancho,
+          p.Perfil,
+          p.DiametroRin,
+          p.IndiceCarga,
+          p.IndiceVelocidad,
+          p.Destacado
+        FROM Productos p
+        WHERE p.ProductoID = @ProductoID AND p.Activo = 1
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo producto:', err);
+    res.status(500).json({ error: 'Error al obtener producto' });
+  }
+});
+
+// Eliminar producto (Admin) - Eliminación lógica
+app.delete('/api/admin/productos/:id', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .input('ProductoID', sql.Int, req.params.id)
+      .query(`
+        UPDATE Productos 
+        SET Activo = 0 
+        WHERE ProductoID = @ProductoID
+      `);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    res.json({ success: true, message: 'Producto eliminado correctamente' });
+  } catch (err) {
+    console.error('Error eliminando producto:', err);
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
+// Obtener todas las marcas (Admin)
+app.get('/api/admin/marcas', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query('SELECT MarcaID, NombreMarca FROM Marcas WHERE Activo = 1 ORDER BY NombreMarca');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo marcas:', err);
+    res.status(500).json({ error: 'Error al obtener marcas' });
+  }
+});
+
+
+
+
+
+
+
+
 // =============================================
 // INICIAR SERVIDOR
 // =============================================
@@ -802,3 +1036,4 @@ connectDatabases().then(() => {
 process.on('unhandledRejection', (err) => {
   console.error('Error no manejado:', err);
 });
+

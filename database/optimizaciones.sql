@@ -297,146 +297,110 @@ GO
 -- CATEGORÍA 2: GESTIÓN DE PRODUCTOS
 -- =============================================
 
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_CrearProducto')
-    DROP PROCEDURE sp_CrearProducto;
-GO
-
-CREATE PROCEDURE sp_CrearProducto
+CREATE PROCEDURE sp_CrearOActualizarProducto2
     @CodigoProducto NVARCHAR(50),
-    @NombreProducto NVARCHAR(255),
-    @Descripcion NVARCHAR(MAX) = NULL,
-    @CategoriaID INT,
-    @MarcaID INT,
-    @Ancho INT = NULL,
-    @Perfil INT = NULL,
-    @DiametroRin INT = NULL,
-    @IndiceCarga NVARCHAR(10) = NULL,
-    @IndiceVelocidad NVARCHAR(10) = NULL,
+    @NombreProducto NVARCHAR(200),
+    @Descripcion NVARCHAR(1000),
+    @CategoriaID INT = NULL, -- Acepta NULL (opcional)
+    @MarcaID INT = NULL,     -- Acepta NULL (opcional)
+    
+    -- Parámetros de Precio y Stock
     @PrecioCompraBs DECIMAL(10,2),
     @PrecioVentaBs DECIMAL(10,2),
+    @StockActual INT, 
     @StockMinimo INT,
-    @StockActual INT,
-    @Destacado BIT = 0
+    
+    -- Parámetros de Llanta (Opcionales - Usar NULL para Accesorios)
+    @Ancho INT = NULL,
+    @Perfil INT = NULL,
+    @DiametroRin INT = NULL, 
+    @IndiceCarga NVARCHAR(10) = NULL, -- Indice de Carga para llantas
+    @IndiceVelocidad NVARCHAR(5) = NULL, -- Indice de Velocidad para llantas
+    
+    -- Parámetros Adicionales
+    @Destacado BIT,
+    @UsuarioID INT -- Para auditoría
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-    
-    DECLARE @Reintentos INT = 0;
-    DECLARE @MaxReintentos INT = 3;
-    DECLARE @Exitoso BIT = 0;
-    
-    WHILE @Reintentos < @MaxReintentos AND @Exitoso = 0
-    BEGIN
-        SET @Reintentos = @Reintentos + 1;
-        
-        BEGIN TRY
-            BEGIN TRANSACTION;
-            
-            IF EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE CodigoProducto = @CodigoProducto)
-            BEGIN
-                RAISERROR('El código de producto ya existe', 16, 1);
-            END
-            
-            IF NOT EXISTS (SELECT 1 FROM Categorias WHERE CategoriaID = @CategoriaID AND Activo = 1)
-            BEGIN
-                RAISERROR('Categoría no encontrada o inactiva', 16, 1);
-            END
-            
-            IF @MarcaID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Marcas WHERE MarcaID = @MarcaID AND Activo = 1)
-            BEGIN
-                RAISERROR('Marca no encontrada o inactiva', 16, 1);
-            END
-            
-            DECLARE @ProductoID INT;
-            
-            INSERT INTO Productos (
-                CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID,
-                Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad,
-                PrecioCompraBs, PrecioVentaBs, StockMinimo, StockActual, Activo, Destacado
-            )
-            VALUES (
-                @CodigoProducto, @NombreProducto, @Descripcion, @CategoriaID, @MarcaID,
-                @Ancho, @Perfil, @DiametroRin, @IndiceCarga, @IndiceVelocidad,
-                @PrecioCompraBs, @PrecioVentaBs, @StockMinimo, @StockActual, 1, @Destacado
-            );
-            
-            SET @ProductoID = SCOPE_IDENTITY();
-            
-            COMMIT TRANSACTION;
-            SET @Exitoso = 1;
-            
-            SELECT @ProductoID AS ProductoID, 'Producto creado exitosamente' AS Mensaje;
-            
-        END TRY
-        BEGIN CATCH
-            IF @@TRANCOUNT > 0
-                ROLLBACK TRANSACTION;
-            
-            IF ERROR_NUMBER() = 1205 AND @Reintentos < @MaxReintentos
-            BEGIN
-                WAITFOR DELAY '00:00:01';
-                CONTINUE;
-            END;
-            
-            THROW;
-        END CATCH
-    END
-END
-GO
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; -- Alto nivel de aislamiento para la operación de Upsert
 
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'sp_ActualizarProducto')
-    DROP PROCEDURE sp_ActualizarProducto;
-GO
-
-CREATE PROCEDURE sp_ActualizarProducto
-    @ProductoID INT,
-    @NombreProducto NVARCHAR(255) = NULL,
-    @Descripcion NVARCHAR(MAX) = NULL,
-    @PrecioCompraBs DECIMAL(10,2) = NULL,
-    @PrecioVentaBs DECIMAL(10,2) = NULL,
-    @StockMinimo INT = NULL,
-    @Destacado BIT = NULL,
-    @Activo BIT = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
-    
     BEGIN TRY
         BEGIN TRANSACTION;
-        
-        IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE ProductoID = @ProductoID)
+
+        DECLARE @ExistingProductoID INT;
+
+        -- 1. Intentar encontrar el producto por CodigoProducto
+        SELECT @ExistingProductoID = ProductoID 
+        FROM Productos 
+        WHERE CodigoProducto = @CodigoProducto;
+
+        IF @ExistingProductoID IS NOT NULL
         BEGIN
-            RAISERROR('Producto no encontrado', 16, 1);
+            -- ===================================
+            -- 2. ACTUALIZAR PRODUCTO EXISTENTE
+            -- ===================================
+            
+            UPDATE Productos
+            SET
+                NombreProducto = @NombreProducto,
+                Descripcion = @Descripcion,
+                CategoriaID = @CategoriaID,
+                MarcaID = @MarcaID,
+                PrecioCompraBs = @PrecioCompraBs,
+                PrecioVentaBs = @PrecioVentaBs,
+                StockActual = @StockActual,
+                StockMinimo = @StockMinimo,
+                -- Dimensiones de Llanta
+                Ancho = @Ancho,
+                Perfil = @Perfil,
+                DiametroRin = @DiametroRin,
+                IndiceCarga = @IndiceCarga,
+                IndiceVelocidad = @IndiceVelocidad,
+                Destacado = @Destacado
+            WHERE ProductoID = @ExistingProductoID;
+
+            -- Retorna el ID del producto actualizado
+            SELECT @ExistingProductoID AS ProductoID, 'ACTUALIZADO' AS Operacion;
         END
-        
-        UPDATE Productos
-        SET 
-            NombreProducto = COALESCE(@NombreProducto, NombreProducto),
-            Descripcion = COALESCE(@Descripcion, Descripcion),
-            PrecioCompraBs = COALESCE(@PrecioCompraBs, PrecioCompraBs),
-            PrecioVentaBs = COALESCE(@PrecioVentaBs, PrecioVentaBs),
-            StockMinimo = COALESCE(@StockMinimo, StockMinimo),
-            Destacado = COALESCE(@Destacado, Destacado),
-            Activo = COALESCE(@Activo, Activo)
-        WHERE ProductoID = @ProductoID;
-        
+        ELSE
+        BEGIN
+            -- ===================================
+            -- 3. CREAR NUEVO PRODUCTO
+            -- ===================================
+            
+            INSERT INTO Productos (
+                CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID, 
+                PrecioCompraBs, PrecioVentaBs, StockActual, StockMinimo, 
+                Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad, 
+                Destacado
+            )
+            VALUES (
+                @CodigoProducto, @NombreProducto, @Descripcion, @CategoriaID, @MarcaID, 
+                @PrecioCompraBs, @PrecioVentaBs, @StockActual, @StockMinimo, 
+                @Ancho, @Perfil, @DiametroRin, @IndiceCarga, @IndiceVelocidad, 
+                @Destacado
+            );
+
+            SELECT @ExistingProductoID = SCOPE_IDENTITY(); -- Captura el nuevo ID generado
+            -- Retorna el ID del nuevo producto
+            SELECT @ExistingProductoID AS ProductoID, 'CREADO' AS Operacion;
+        END
+
         COMMIT TRANSACTION;
-        
-        SELECT @ProductoID AS ProductoID, 'Producto actualizado exitosamente' AS Mensaje;
-        
     END TRY
     BEGIN CATCH
+        -- Si hay algún error, revierta la transacción
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
+
+        -- Relanzar el error
         THROW;
     END CATCH
 END
 GO
 
-PRINT '✓ Gestión de Productos: 2 SPs creados';
-GO
+
 
 -- =============================================
 -- CATEGORÍA 3: GESTIÓN DE COMPRAS
@@ -1894,3 +1858,38 @@ BEGIN
 END
 GO
 
+ALTER PROCEDURE sp_ObtenerProductosCatalogo
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+    
+    -- Selecciona todos los campos de la vista optimizada para el cliente.
+    SELECT * FROM vw_ProductosDisponibles
+    ORDER BY Destacado DESC, NombreProducto ASC;
+END
+GO
+
+CREATE PROCEDURE sp_ObtenerCategoriasConProductos
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+    
+    SELECT DISTINCT 
+        c.CategoriaID,
+        c.NombreCategoria
+    FROM Categorias c
+    INNER JOIN Productos p 
+        ON c.CategoriaID = p.CategoriaID
+    WHERE 
+        p.Activo = 1         -- Solo productos activos
+        AND p.StockActual > 0  -- Solo productos con stock disponible
+    ORDER BY 
+        c.NombreCategoria ASC;
+END
+GO
+
+
+
+exec sp_ObtenerCategoriasConProductos
