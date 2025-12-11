@@ -1,7 +1,11 @@
-// Configuración de la API
+/* ============================================================
+   1. CONFIGURACIÓN
+============================================================ */
 const API_URL = 'http://localhost:3000/api';
 
-// Generar o recuperar sessionId
+/* ============================================================
+   2. AUTENTICACIÓN Y SESIÓN
+============================================================ */
 function getSessionId() {
   let sessionId = localStorage.getItem('sessionId');
   if (!sessionId) {
@@ -11,7 +15,6 @@ function getSessionId() {
   return sessionId;
 }
 
-// NOTA: Cambiado de 'authToken' a 'token' para consistencia con el resto del proyecto
 function getToken() {
   return localStorage.getItem('authToken');
 }
@@ -25,251 +28,191 @@ function isAuthenticated() {
   return getToken() !== null;
 }
 
-// =============================================
-// CARGA INICIAL
-// =============================================
-document.addEventListener('DOMContentLoaded', async () => {
-  const sessionId = getSessionId();
+function cerrarSesion() {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('usuario');
+  window.location.href = 'index.html';
+}
 
-  actualizarHeaderUI(); // Esta función ahora maneja todo el contenido del header-actions
-  await cargarMarcas();
-  await cargarProductosDestacados();
-  await cargarCarrito();
-  configurarEventos();
-});
-
-// =============================================
-// ACTUALIZAR HEADER UI
-// =============================================
+/* ============================================================
+   3. UI DEL HEADER
+============================================================ */
 function actualizarHeaderUI() {
   const usuario = getUsuario();
-  const headerActions = document.querySelector('.header-actions'); // Obtener el contenedor
+  const headerActions = document.querySelector('.header-actions');
 
-  let headerHtml = `
+  let html = `
     <button id="btn-carrito" class="btn-login">
       🛒 Carrito <span id="cart-count" class="cart-count">0</span>
     </button>
   `;
 
   if (usuario) {
-    // Si el usuario está logeado
-    headerHtml += `
+    html += `
       <span class="user-name">¡Hola, ${usuario.nombre}! 👋</span>
-      <a href="perfil.html" class="btn-login" id="btn-mi-perfil">👤 Mi Perfil</a>
+      <a href="perfil.html" class="btn-login">👤 Mi Perfil</a>
       <button id="btn-mis-compras" class="btn-login">📦 Mis Compras</button>
       ${usuario.rolID === 1 ? '<a href="admin.html" class="btn-login">⚙️ Admin</a>' : ''}
       <button id="btn-cerrar-sesion" class="btn-primary">🚪 Cerrar Sesión</button>
     `;
   } else {
-    // Si el usuario no está logeado, solo mostrar "Iniciar Sesión"
-    headerHtml += `
-      <a href="login.html" class="btn-primary" id="btn-iniciar-sesion">Iniciar Sesión</a>
-    `;
+    html += `<a href="login.html" class="btn-primary">Iniciar Sesión</a>`;
   }
 
-  headerActions.innerHTML = headerHtml; // Actualizar el HTML del contenedor
+  headerActions.innerHTML = html;
 
-  // Re-adjuntar listeners, ya que el innerHTML los elimina
+  // Listeners
   document.getElementById('btn-carrito').addEventListener('click', mostrarCarrito);
 
   if (usuario) {
     document.getElementById('btn-mis-compras').addEventListener('click', () => {
-        window.location.href = 'historial.html';
+      window.location.href = 'historial.html';
     });
     document.getElementById('btn-cerrar-sesion').addEventListener('click', cerrarSesion);
-    
-    if (usuario.rolID === 1) {
-        const btnAdmin = document.querySelector('.header-actions a[href="admin.html"]');
-        if (btnAdmin) { // Asegurarse de que el elemento existe antes de añadir el listener
-            btnAdmin.addEventListener('click', () => {
-                window.location.href = 'admin.html';
-            });
-        }
-    }
   }
 }
 
-function cerrarSesion() {
-  localStorage.removeItem('authToken'); // Corregido a 'authToken'
-  localStorage.removeItem('usuario');
-  window.location.href = 'index.html';
-}
+/* ============================================================
+   4. INICIALIZACIÓN GENERAL
+============================================================ */
+document.addEventListener('DOMContentLoaded', async () => {
+  getSessionId();
+  actualizarHeaderUI();
+  configurarEventos();
 
-// =============================================
-// CARGAR MARCAS DE VEHÍCULOS
-// =============================================
+  await cargarMarcas();
+  await cargarProductosDestacados();
+  await cargarCarrito();
+});
+
+/* ============================================================
+   5. VEHÍCULOS (Marcas / Modelos / Versiones)
+============================================================ */
+
+// ---- MARCAS ----
 async function cargarMarcas() {
   try {
     const response = await fetch(`${API_URL}/vehiculos/marcas`);
     const marcas = await response.json();
 
-    console.log('📊 Marcas obtenidas:', marcas); // 👈 AGREGA ESTO
-    const selectMarcas = document.getElementById('marcas');
-    selectMarcas.innerHTML = '<option value="">Seleccione una marca</option>';
+    const select = document.getElementById('marcas');
+    select.innerHTML = '<option value="">Seleccione una marca</option>';
 
-    marcas.forEach(marca => {
+    marcas.forEach(m => {
       const option = document.createElement('option');
-      option.value = marca.MarcaVehiculoID;
-      option.textContent = marca.Nombre;
-      selectMarcas.appendChild(option);
+      option.value = m.MarcaVehiculoID;
+      option.textContent = m.NombreMarca;
+      select.appendChild(option);
     });
   } catch (err) {
-    console.error('Error cargando marcas:', err);
     mostrarMensaje('Error al cargar marcas', 'error');
   }
 }
 
-// =============================================
-// CONFIGURAR EVENTOS
-// =============================================
-function configurarEventos() {
-  const selectMarcas = document.getElementById('marcas');
-  const selectModelos = document.getElementById('modelos');
-  const selectVersiones = document.getElementById('versiones');
-
-  selectMarcas.addEventListener('change', async (e) => {
-    const marcaID = e.target.value;
-
-    selectModelos.innerHTML = '<option value="">Seleccione un modelo</option>';
-    selectModelos.disabled = !marcaID;
-    selectVersiones.innerHTML = '<option value="">Seleccione un modelo primero</option>';
-    selectVersiones.disabled = true;
-
-    document.getElementById('productos').innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>Seleccione un vehículo para ver productos compatibles</p></div></li>';
-
-    if (marcaID) {
-      await cargarModelos(marcaID);
-    }
-  });
-
-  selectModelos.addEventListener('change', async (e) => {
-    const modeloID = e.target.value;
-
-    selectVersiones.innerHTML = '<option value="">Seleccione una versión</option>';
-    selectVersiones.disabled = !modeloID;
-
-    document.getElementById('productos').innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>Seleccione una versión para ver productos compatibles</p></div></li>';
-
-    if (modeloID) {
-      await cargarVersiones(modeloID);
-    }
-  });
-
-  selectVersiones.addEventListener('change', async (e) => {
-    const versionID = e.target.value;
-
-    if (versionID) {
-      await cargarProductosCompatibles(versionID);
-    } else {
-      document.getElementById('productos').innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>Seleccione una versión para ver productos compatibles</p></div></li>';
-    }
-  });
-}
-
-// =============================================
-// CARGAR MODELOS
-// =============================================
+// ---- MODELOS ----
 async function cargarModelos(marcaID) {
   try {
     const response = await fetch(`${API_URL}/vehiculos/modelos/${marcaID}`);
     const modelos = await response.json();
 
-    const selectModelos = document.getElementById('modelos');
-    selectModelos.innerHTML = '<option value="">Seleccione un modelo</option>';
+    const select = document.getElementById('modelos');
+    select.innerHTML = '<option value="">Seleccione un modelo</option>';
 
-    modelos.forEach(modelo => {
+    modelos.forEach(m => {
       const option = document.createElement('option');
-      option.value = modelo.ModeloVehiculoID;
-      option.textContent = modelo.NombreModelo;
-      selectModelos.appendChild(option);
+      option.value = m.ModeloVehiculoID;
+      option.textContent = m.NombreModelo;
+      select.appendChild(option);
     });
   } catch (err) {
-    console.error('Error cargando modelos:', err);
     mostrarMensaje('Error al cargar modelos', 'error');
   }
 }
 
-// =============================================
-// CARGAR VERSIONES
-// =============================================
-async function cargarVersiones(modeloID) {
+async function cargarAnios(modeloID) {
   try {
-    const response = await fetch(`${API_URL}/vehiculos/versiones/${modeloID}`);
-    const versiones = await response.json();
+    // Llama al endpoint del servidor
+    const response = await fetch(`${API_URL}/vehiculos/anios/${modeloID}`);
+    const anios = await response.json();
 
-    const selectVersiones = document.getElementById('versiones');
-    selectVersiones.innerHTML = '<option value="">Seleccione una versión</option>';
+    // 🟢 NOTA: Usamos el select con ID 'versiones' para los AÑOS
+    const selectAnios = document.getElementById('anios');
+    selectAnios.innerHTML = '<option value="">Seleccione un año</option>';
+    selectAnios.disabled = false;
 
-    versiones.forEach(version => {
+    anios.forEach(anio => {
       const option = document.createElement('option');
-      option.value = version.VersionVehiculoID;
-      option.textContent = `${version.NombreVersion} (${version.Anio})`;
-      selectVersiones.appendChild(option);
+      option.value = anio.Anio; // Usamos el campo Anio como valor y texto
+      option.textContent = anio.Anio;
+      selectAnios.appendChild(option);
     });
   } catch (err) {
-    console.error('Error cargando versiones:', err);
-    mostrarMensaje('Error al cargar versiones', 'error');
+    console.error('Error cargando años:', err);
+    mostrarMensaje('Error al cargar años', 'error');
   }
 }
 
-// =============================================
-// CARGAR PRODUCTOS COMPATIBLES
-// =============================================
-async function cargarProductosCompatibles(versionID) {
+// ========================================================
+// ---- PRODUCTOS COMPATIBLES (MODELO + AÑO) ----
+// ========================================================
+// 🟢 CORRECCIÓN 1: La función ahora acepta modeloID y anio
+async function cargarProductosCompatibles(modeloID, anio) {
   try {
-    const response = await fetch(`${API_URL}/productos/compatibles/${versionID}`);
+    // 🟢 CORRECCIÓN 2: La URL usa la nueva ruta con Modelo y Año
+    const response = await fetch(`${API_URL}/productos/compatibles/${modeloID}/${anio}`);
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: No se pudieron cargar los productos compatibles.`);
+    }
+
     const productos = await response.json();
 
-    const listaProductos = document.getElementById('productos');
+    const lista = document.getElementById('productos');
 
     if (productos.length === 0) {
-      listaProductos.innerHTML = '<li class="empty-message"><div style="text-align: center; padding: 40px;"><p>No hay productos compatibles disponibles para esta versión</p></div></li>';
+      lista.innerHTML = '<li class="empty-message"><p>No hay productos disponibles para este vehículo</p></li>';
       return;
     }
 
-    listaProductos.innerHTML = '';
+    lista.innerHTML = '';
 
-    productos.forEach(producto => {
-      const li = document.createElement('li');
-      li.className = 'producto-item';
+    productos.forEach(p => {
+      // Usamos MedidaCompleta si está disponible, si no, lo construimos
+      const medida = p.MedidaCompleta || (p.Ancho && p.Perfil && p.DiametroRin ? `${p.Ancho}/${p.Perfil}R${p.DiametroRin}` : '');
 
-      const medida = producto.Ancho && producto.Perfil && producto.DiametroRin
-        ? `${producto.Ancho}/${producto.Perfil}R${producto.DiametroRin}`
-        : '';
+      // La lógica de renderizado sigue siendo válida, ya que tu SP retorna todos los campos.
 
-      li.innerHTML = `
-        <div class="producto-info">
-          ${producto.ImagenPrincipalURL ? `<img src="${producto.ImagenPrincipalURL}" alt="${producto.NombreProducto}" onerror="this.style.display='none'">` : ''}
-          <div>
-            <h3>${producto.NombreProducto}</h3>
-            <p class="producto-codigo">Código: ${producto.CodigoProducto}</p>
-            ${medida ? `<p class="producto-medida"><strong>Medida:</strong> ${medida}</p>` : ''}
-            ${producto.Descripcion ? `<p class="producto-descripcion">${producto.Descripcion}</p>` : ''}
-            <p class="producto-marca">🏭 ${producto.NombreMarca}</p>
-            <p class="producto-categoria">📦 ${producto.NombreCategoria}</p>
-            ${producto.Posicion ? `<p class="producto-posicion">🎯 Posición: ${producto.Posicion}</p>` : ''}
-            ${producto.Observacion ? `<p class="producto-observacion">💡 ${producto.Observacion}</p>` : ''}
-            <p class="producto-stock">✅ Stock: ${producto.StockActual} unidades</p>
+      lista.innerHTML += `
+        <li class="producto-item">
+          <div class="producto-info">
+            ${p.ImagenPrincipalURL ? `<img src="${p.ImagenPrincipalURL}" alt="${p.NombreProducto}">` : ''}
+            <div>
+              <h3>${p.NombreProducto}</h3>
+              <p class="producto-codigo">Código: ${p.CodigoProducto}</p>
+              ${medida ? `<p><strong>Medida:</strong> ${medida}</p>` : ''}
+              <p class="producto-marca">🏭 ${p.MarcaLlanta}</p>
+              <p class="producto-categoria">📦 ${p.NombreCategoria}</p>
+              <p class="producto-stock">Stock: ${p.StockActual}</p>
+            </div>
           </div>
-        </div>
-        <div class="producto-acciones">
-          <p class="producto-precio">Bs ${producto.PrecioVentaBs.toFixed(2)}</p>
-          <button class="btn-agregar" onclick="agregarAlCarrito(${producto.ProductoID}, '${producto.NombreProducto.replace(/'/g, "\\'")}', ${producto.PrecioVentaBs})">
-            🛒 Agregar al Carrito
-          </button>
-        </div>
+
+          <div class="producto-acciones">
+            <p class="producto-precio">Bs ${p.PrecioVentaBs.toFixed(2)}</p>
+            <button class="btn-agregar"
+              onclick="agregarAlCarrito(${p.ProductoID}, '${p.NombreProducto.replace(/'/g, "\\'")}', ${p.PrecioVentaBs})">
+              🛒 Agregar
+            </button>
+          </div>
+        </li>
       `;
-      listaProductos.appendChild(li);
     });
   } catch (err) {
-    console.error('Error cargando productos:', err);
-    mostrarMensaje('Error al cargar productos', 'error');
+    console.error('Error al cargar productos compatibles:', err);
+    mostrarMensaje('Error al cargar productos. ' + err.message, 'error');
   }
 }
 
-// =============================================
-// CARGAR PRODUCTOS DESTACADOS
-// =============================================
+// ---- PRODUCTOS DESTACADOS ----
 async function cargarProductosDestacados() {
   try {
     const response = await fetch(`${API_URL}/productos/destacados`);
@@ -277,43 +220,43 @@ async function cargarProductosDestacados() {
 
     if (productos.length === 0) return;
 
-    const section = document.getElementById('destacados-section');
     const lista = document.getElementById('productos-destacados');
+    const section = document.getElementById('destacados-section');
 
     section.style.display = 'block';
     lista.innerHTML = '';
 
-    productos.forEach(producto => {
-      const li = document.createElement('li');
-      li.className = 'producto-item';
-      li.innerHTML = `
-        <div class="producto-info">
-          ${producto.ImagenPrincipalURL ? `<img src="${producto.ImagenPrincipalURL}" alt="${producto.NombreProducto}" onerror="this.style.display='none'">` : ''}
-          <div>
-            <h3>⭐ ${producto.NombreProducto}</h3>
-            <p class="producto-codigo">Código: ${producto.CodigoProducto}</p>
-            ${producto.Descripcion ? `<p class="producto-descripcion">${producto.Descripcion}</p>` : ''}
-            <p class="producto-marca">🏭 ${producto.NombreMarca}</p>
-            <p class="producto-stock">✅ Stock: ${producto.StockActual} unidades</p>
+    productos.forEach(p => {
+      lista.innerHTML += `
+        <li class="producto-item">
+          <div class="producto-info">
+            ${p.ImagenPrincipalURL ? `<img src="${p.ImagenPrincipalURL}">` : ''}
+            <div>
+              <h3>⭐ ${p.NombreProducto}</h3>
+              <p>Código: ${p.CodigoProducto}</p>
+              <p>🏭 ${p.NombreMarca}</p>
+              <p>Stock: ${p.StockActual}</p>
+            </div>
           </div>
-        </div>
-        <div class="producto-acciones">
-          <p class="producto-precio">Bs ${producto.PrecioVentaBs.toFixed(2)}</p>
-          <button class="btn-agregar" onclick="agregarAlCarrito(${producto.ProductoID}, '${producto.NombreProducto.replace(/'/g, "\\'")}', ${producto.PrecioVentaBs})">
-            🛒 Agregar
-          </button>
-        </div>
+
+          <div class="producto-acciones">
+            <p class="producto-precio">Bs ${p.PrecioVentaBs.toFixed(2)}</p>
+            <button class="btn-agregar"
+              onclick="agregarAlCarrito(${p.ProductoID}, '${p.NombreProducto.replace(/'/g, "\\'")}', ${p.PrecioVentaBs})">
+              🛒 Agregar
+            </button>
+          </div>
+        </li>
       `;
-      lista.appendChild(li);
     });
   } catch (err) {
-    console.error('Error cargando productos destacados:', err);
+    console.error(err);
   }
 }
 
-// =============================================
-// CARRITO
-// =============================================
+/* ============================================================
+   7. CARRITO
+============================================================ */
 async function cargarCarrito() {
   try {
     const sessionId = getSessionId();
@@ -322,20 +265,19 @@ async function cargarCarrito() {
 
     actualizarContadorCarrito(carrito.items.length);
   } catch (err) {
-    console.error('Error cargando carrito:', err);
+    mostrarMensaje('Error al cargar carrito', 'error');
   }
 }
 
 function actualizarContadorCarrito(cantidad) {
-  const cartCount = document.getElementById('cart-count');
-  if (cartCount) {
-    cartCount.textContent = cantidad;
-  }
+  const el = document.getElementById('cart-count');
+  if (el) el.textContent = cantidad;
 }
 
 async function agregarAlCarrito(productoID, nombre, precio) {
   try {
     const sessionId = getSessionId();
+
     const response = await fetch(`${API_URL}/carrito/${sessionId}/agregar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -343,16 +285,15 @@ async function agregarAlCarrito(productoID, nombre, precio) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error);
+      throw new Error((await response.json()).error);
     }
 
     const carrito = await response.json();
     actualizarContadorCarrito(carrito.items.length);
-    mostrarMensaje('✅ Producto agregado al carrito', 'success');
+
+    mostrarMensaje('Producto agregado correctamente', 'success');
   } catch (err) {
-    console.error('Error agregando al carrito:', err);
-    mostrarMensaje('❌ ' + (err.message || 'Error al agregar al carrito'), 'error');
+    mostrarMensaje(err.message, 'error');
   }
 }
 
@@ -360,9 +301,68 @@ function mostrarCarrito() {
   window.location.href = 'carrito.html';
 }
 
-// =============================================
-// UTILIDADES
-// =============================================
+/* ============================================================
+   8. EVENTOS
+============================================================ */
+function configurarEventos() {
+  const selectMarcas = document.getElementById('marcas');
+  const selectModelos = document.getElementById('modelos');
+  const selectAnios = document.getElementById('anios');
+
+  // Marcas
+  selectMarcas.addEventListener('change', async e => {
+    const id = e.target.value;
+
+    selectModelos.disabled = !id;
+    selectAnios.disabled = true;
+    selectModelos.innerHTML = '<option value="">Seleccione un modelo</option>';
+    selectAnios.innerHTML = '<option value="">Seleccione un año</option>';
+
+    resetProductosUI();
+
+    if (id) await cargarModelos(id);
+  });
+
+  // Modelos
+  // Modelos (CORREGIDO)
+  selectModelos.addEventListener('change', async e => {
+    const id = e.target.value; // Este es el ModeloID
+
+    selectAnios.disabled = !id;
+    selectAnios.innerHTML = '<option value="">Seleccione un año</option>';
+
+    resetProductosUI();
+
+    if (id) {
+      await cargarAnios(id); // ⚠️ carga los años del modelo
+    }
+  });
+
+  selectAnios.addEventListener('change', async (e) => {
+    const anio = e.target.value;
+    const modeloID = selectModelos.value;
+
+    if (anio && modeloID) {
+      await cargarProductosCompatibles(modeloID, anio);
+    } else {
+      document.getElementById('productos').innerHTML = '<li class="empty-message"><p>Seleccione un modelo y año para ver productos compatibles</p></li>';
+    }
+  });
+}
+
+
+function resetProductosUI() {
+  document.getElementById('productos').innerHTML =
+    '<li class="empty-message"><p>Seleccione un vehículo</p></li>';
+}
+
+/* ============================================================\
+ 9. UTILIDADES (Asegúrate de que esta función NO esté anidada)
+============================================================ */
+
+
+// 🟢 CORRECCIÓN: Colocar esta función al inicio o al final del script.js,
+// pero fuera de cualquier otra función contenedora.
 function mostrarMensaje(mensaje, tipo = 'info') {
   const mensajeDiv = document.createElement('div');
   mensajeDiv.className = `mensaje mensaje-${tipo}`;
@@ -375,15 +375,26 @@ function mostrarMensaje(mensaje, tipo = 'info') {
     background: ${tipo === 'success' ? '#4CAF50' : tipo === 'error' ? '#f44336' : '#2196F3'};
     color: white;
     border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 10000;
-    animation: slideIn 0.3s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s, transform 0.5s;
+    transform: translateY(20px);
   `;
 
   document.body.appendChild(mensajeDiv);
 
+  // Animación de entrada
   setTimeout(() => {
-    mensajeDiv.style.animation = 'slideOut 0.3s ease-in-out';
-    setTimeout(() => mensajeDiv.remove(), 300);
+    mensajeDiv.style.opacity = 1;
+    mensajeDiv.style.transform = 'translateY(0)';
+  }, 10);
+
+  // Animación de salida y remoción después de 3 segundos
+  setTimeout(() => {
+    mensajeDiv.style.opacity = 0;
+    mensajeDiv.style.transform = 'translateY(20px)';
+    setTimeout(() => mensajeDiv.remove(), 500);
   }, 3000);
+
 }
