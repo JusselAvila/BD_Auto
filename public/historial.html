@@ -9,8 +9,8 @@
 </head>
 
 <body>
-
     <div class="container">
+        <!-- Header -->
         <header>
             <div>
                 <a href="index.html" style="text-decoration: none; color: inherit;">
@@ -21,27 +21,38 @@
             <div class="header-actions">
                 <a href="index.html" class="btn-login">🏠 Inicio</a>
                 <a href="perfil.html" class="btn-login">👤 Mi Perfil</a>
+                <a href="carrito.html" class="btn-login">🛒 Carrito</a>
             </div>
         </header>
 
-        <main class="form-container">
-            <div class="card">
-                <h2>Historial de Compras</h2>
-                <p>Aquí puedes ver todas tus compras realizadas.</p>
+        <!-- Main Content -->
+        <main class="productos-section">
+            <h2>🛍️ Historial de Compras</h2>
+            <p class="texto-centrado mb-20" style="font-size: 1.1rem;">
+                Revisa el estado y detalle de todas tus compras realizadas
+            </p>
 
-                <div id="historial-compras-container">
-                    <!-- Las compras se cargarán aquí dinámicamente -->
-                    <p>Cargando historial de compras...</p>
-                </div>
+            <!-- Contenedor de Historial -->
+            <div id="historial-compras-container">
+                <!-- Loading state (se llena dinámicamente) -->
             </div>
         </main>
-
-        <footer
-            style="background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); color: white; text-align: center; padding: 30px; margin-top: 40px; border-radius: 20px;">
-            <p>© 2024 Avila's Tyre Company - Todos los derechos reservados</p>
-        </footer>
     </div>
 
+    <!-- Modal para Detalle de Venta -->
+    <div id="modal-detalle" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📄 Detalle de la Venta</h2>
+                <button class="btn-close" id="cerrar-modal">✖</button>
+            </div>
+            <div class="modal-body" id="detalle-venta">
+                <!-- El contenido se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="js/historial.js"></script>
 </body>
 

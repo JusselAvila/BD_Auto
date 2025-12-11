@@ -10,500 +10,418 @@ let clientes = [];
 let posCart = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadVentas();
-    await loadProductos();
-    await loadClientes();
-    setupEventListeners();
-    updateStats();
+  const token = localStorage.getItem('authToken');
+
+  if (!token) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // Cargar ventas inicialmente
+  await cargarVentas();
+  await cargarEstadisticas();
+
+  // Event Listeners
+  document.getElementById('btn-nueva-venta')?.addEventListener('click', abrirModalPOS);
+  document.getElementById('btn-reportes')?.addEventListener('click', generarReporte);
+
+  // Filtros
+  document.getElementById('filter-fecha-inicio')?.addEventListener('change', aplicarFiltros);
+  document.getElementById('filter-fecha-fin')?.addEventListener('change', aplicarFiltros);
+  document.getElementById('filter-estado')?.addEventListener('change', aplicarFiltros);
 });
-
-// =============================================
-// EVENT LISTENERS
-// =============================================
-
-function setupEventListeners() {
-    document.getElementById('btn-nueva-venta').addEventListener('click', openPOS);
-    document.getElementById('filter-fecha-inicio').addEventListener('change', filterVentas);
-    document.getElementById('filter-fecha-fin').addEventListener('change', filterVentas);
-    document.getElementById('filter-estado').addEventListener('change', filterVentas);
-    document.getElementById('btn-reportes').addEventListener('click', generateReport);
-
-    // POS
-    document.getElementById('pos-search-producto').addEventListener('input', searchProductos);
-    document.getElementById('pos-descuento').addEventListener('input', updatePOSTotal);
-    document.getElementById('btn-procesar-venta').addEventListener('click', procesarVenta);
-}
-
 // =============================================
 // LOAD DATA
 // =============================================
 
-async function loadVentas() {
-    try {
-        showLoading('#ventas-table tbody');
+let ventasGlobal = []; // Para los filtros
 
-        // Simulated data - replace with actual API call
-        ventas = [
-            {
-                VentaID: 1,
-                NumeroFactura: 'FAC-001',
-                FechaVenta: '2024-11-28T10:30:00',
-                ClienteNombre: 'Juan Pérez García',
-                CantidadProductos: 2,
-                DescuentoPorcentaje: 0,
-                DescuentoBs: 0,
-                TotalVentaBs: 1700.00,
-                NombreEstado: 'Completado'
-            },
-            {
-                VentaID: 2,
-                NumeroFactura: 'FAC-002',
-                FechaVenta: '2024-11-29T14:15:00',
-                ClienteNombre: 'Transportes Rápidos SRL',
-                CantidadProductos: 4,
-                DescuentoPorcentaje: 10,
-                DescuentoBs: 368.00,
-                TotalVentaBs: 3312.00,
-                NombreEstado: 'Completado'
-            },
-            {
-                VentaID: 3,
-                NumeroFactura: 'FAC-003',
-                FechaVenta: '2024-11-30T09:45:00',
-                ClienteNombre: 'María Rodriguez López',
-                CantidadProductos: 1,
-                DescuentoPorcentaje: 5,
-                DescuentoBs: 42.50,
-                TotalVentaBs: 807.50,
-                NombreEstado: 'Pendiente'
-            }
-        ];
+async function cargarVentas() {
+  const token = localStorage.getItem('authToken');
+  const tbody = document.querySelector('#ventas-table tbody');
 
-        renderVentas(ventas);
-    } catch (err) {
-        console.error('Error loading ventas:', err);
-        showError('#ventas-table tbody', 'Error al cargar ventas');
-    }
-}
+  try {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;"><div class="spinner"></div><p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando ventas...</p></td></tr>';
 
-async function loadProductos() {
-    // Simulated - use same data as admin-productos
-    productos = [
-        {
-            ProductoID: 1,
-            CodigoProducto: 'LLA-001',
-            NombreProducto: 'Llanta Michelin Primacy 4',
-            PrecioVentaBs: 850.00,
-            StockActual: 25
-        },
-        {
-            ProductoID: 2,
-            CodigoProducto: 'LLA-002',
-            NombreProducto: 'Llanta Goodyear Eagle F1',
-            PrecioVentaBs: 920.00,
-            StockActual: 5
-        },
-        {
-            ProductoID: 3,
-            CodigoProducto: 'LLA-003',
-            NombreProducto: 'Llanta Bridgestone Turanza',
-            PrecioVentaBs: 780.00,
-            StockActual: 15
-        }
-    ];
-}
-
-async function loadClientes() {
-    // Simulated
-    clientes = [
-        { ClienteID: 1, NombreCompleto: 'Juan Pérez García' },
-        { ClienteID: 2, NombreCompleto: 'Transportes Rápidos SRL' },
-        { ClienteID: 3, NombreCompleto: 'María Rodriguez López' }
-    ];
-
-    const select = document.getElementById('pos-cliente');
-    clientes.forEach(c => {
-        select.innerHTML += `<option value="${c.ClienteID}">${c.NombreCompleto}</option>`;
-    });
-}
-
-// =============================================
-// RENDER
-// =============================================
-
-function renderVentas(data) {
-    const tbody = document.querySelector('#ventas-table tbody');
-
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No se encontraron ventas</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = data.map(v => `
-    <tr>
-      <td><strong>${v.NumeroFactura}</strong></td>
-      <td>${formatDateTime(v.FechaVenta)}</td>
-      <td>${v.ClienteNombre}</td>
-      <td>${v.CantidadProductos} item(s)</td>
-      <td>${v.DescuentoPorcentaje > 0 ? `${v.DescuentoPorcentaje}% (${formatCurrency(v.DescuentoBs)})` : '-'}</td>
-      <td><strong>${formatCurrency(v.TotalVentaBs)}</strong></td>
-      <td>
-        <span class="badge ${v.NombreEstado === 'Completado' ? 'badge-success' : v.NombreEstado === 'Pendiente' ? 'badge-warning' : 'badge-danger'}">
-          ${v.NombreEstado}
-        </span>
-      </td>
-      <td>
-        <button class="btn-sm btn-primary" onclick="viewDetalle(${v.VentaID})" title="Ver Detalle">👁️</button>
-        <button class="btn-sm btn-success" onclick="printFactura(${v.VentaID})" title="Imprimir">🖨️</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// =============================================
-// FILTER
-// =============================================
-
-function filterVentas() {
-    const fechaInicio = document.getElementById('filter-fecha-inicio').value;
-    const fechaFin = document.getElementById('filter-fecha-fin').value;
-    const estadoFilter = document.getElementById('filter-estado').value;
-
-    let filtered = ventas.filter(v => {
-        const fecha = new Date(v.FechaVenta).toISOString().split('T')[0];
-
-        const matchFecha = (!fechaInicio || fecha >= fechaInicio) && (!fechaFin || fecha <= fechaFin);
-        const matchEstado = !estadoFilter || v.NombreEstado === estadoFilter;
-
-        return matchFecha && matchEstado;
+    const response = await fetch('/api/admin/ventas', {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
 
-    renderVentas(filtered);
-}
-
-// =============================================
-// POS SYSTEM
-// =============================================
-
-function openPOS() {
-    posCart = [];
-    document.getElementById('pos-search-producto').value = '';
-    document.getElementById('pos-cliente').value = '';
-    document.getElementById('pos-descuento').value = '0';
-    document.getElementById('pos-productos-list').innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Escriba para buscar productos</div>';
-    renderPOSCart();
-    openModal('modal-pos');
-}
-
-function searchProductos() {
-    const searchTerm = document.getElementById('pos-search-producto').value.toLowerCase();
-
-    if (!searchTerm) {
-        document.getElementById('pos-productos-list').innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Escriba para buscar productos</div>';
-        return;
+    if (!response.ok) {
+      throw new Error('Error al cargar ventas');
     }
 
-    const filtered = productos.filter(p =>
-        p.NombreProducto.toLowerCase().includes(searchTerm) ||
-        p.CodigoProducto.toLowerCase().includes(searchTerm)
-    );
+    const ventas = await response.json();
+    ventasGlobal = ventas; // Guardar para filtros
 
-    const list = document.getElementById('pos-productos-list');
+    renderizarVentas(ventas);
 
-    if (filtered.length === 0) {
-        list.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No se encontraron productos</div>';
-        return;
-    }
-
-    list.innerHTML = filtered.map(p => `
-    <div style="
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      transition: all 0.3s;
-    " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="addToPOSCart(${p.ProductoID})">
-      <div>
-        <strong style="color: white; display: block; margin-bottom: 4px;">${p.NombreProducto}</strong>
-        <small style="color: rgba(255,255,255,0.6);">${p.CodigoProducto} | Stock: ${p.StockActual}</small>
-      </div>
-      <div style="text-align: right;">
-        <strong style="color: #10b981; font-size: 1.2rem;">${formatCurrency(p.PrecioVentaBs)}</strong>
-      </div>
-    </div>
-  `).join('');
+  } catch (error) {
+    console.error('Error:', error);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: #ef4444;">${error.message}</td></tr>`;
+  }
 }
 
-function addToPOSCart(productoID) {
-    const producto = productos.find(p => p.ProductoID === productoID);
-    if (!producto) return;
+function renderizarVentas(ventas) {
+  const tbody = document.querySelector('#ventas-table tbody');
 
-    if (producto.StockActual <= 0) {
-        showToast('Producto sin stock disponible', 'error');
-        return;
-    }
+  if (ventas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No se encontraron ventas</td></tr>';
+    return;
+  }
 
-    const existingItem = posCart.find(item => item.productoID === productoID);
+  tbody.innerHTML = ventas.map(venta => {
+    const estadoClass = {
+      'Pendiente': 'badge-warning',
+      'Completado': 'badge-success',
+      'Cancelado': 'badge-danger',
+      'En Proceso': 'badge-info',
+      'En Camino': 'badge-info'
+    }[venta.Estado] || 'badge-secondary';
 
-    if (existingItem) {
-        if (existingItem.cantidad < producto.StockActual) {
-            existingItem.cantidad++;
-        } else {
-            showToast('No hay más stock disponible', 'warning');
-            return;
-        }
-    } else {
-        posCart.push({
-            productoID: productoID,
-            nombre: producto.NombreProducto,
-            precio: producto.PrecioVentaBs,
-            cantidad: 1,
-            stockMax: producto.StockActual
-        });
-    }
+    // Calcular descuento total (Promoción + Cupón)
+    const descuentoTotal = venta.DescuentoBs || 0;
 
-    renderPOSCart();
-    showToast('Producto agregado', 'success');
-}
-
-function removeFromPOSCart(productoID) {
-    posCart = posCart.filter(item => item.productoID !== productoID);
-    renderPOSCart();
-}
-
-function updatePOSQuantity(productoID, delta) {
-    const item = posCart.find(i => i.productoID === productoID);
-    if (!item) return;
-
-    const newQuantity = item.cantidad + delta;
-
-    if (newQuantity <= 0) {
-        removeFromPOSCart(productoID);
-    } else if (newQuantity <= item.stockMax) {
-        item.cantidad = newQuantity;
-        renderPOSCart();
-    } else {
-        showToast('No hay más stock disponible', 'warning');
-    }
-}
-
-function renderPOSCart() {
-    const container = document.getElementById('pos-cart-items');
-
-    if (posCart.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">Carrito vacío</div>';
-    } else {
-        container.innerHTML = posCart.map(item => `
-      <div style="
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-      ">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-          <strong style="color: white; font-size: 0.9rem; flex: 1;">${item.nombre}</strong>
-          <button onclick="removeFromPOSCart(${item.productoID})" style="
-            background: transparent;
-            border: none;
-            color: #ef4444;
-            cursor: pointer;
-            font-size: 1.2rem;
-          ">×</button>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <button onclick="updatePOSQuantity(${item.productoID}, -1)" style="
-              background: rgba(99,102,241,0.2);
-              border: 1px solid #6366f1;
-              color: #6366f1;
-              width: 24px;
-              height: 24px;
-              border-radius: 4px;
-              cursor: pointer;
-              font-weight: bold;
-            ">-</button>
-            <span style="color: white; font-weight: 600; min-width: 20px; text-align: center;">${item.cantidad}</span>
-            <button onclick="updatePOSQuantity(${item.productoID}, 1)" style="
-              background: rgba(99,102,241,0.2);
-              border: 1px solid #6366f1;
-              color: #6366f1;
-              width: 24px;
-              height: 24px;
-              border-radius: 4px;
-              cursor: pointer;
-              font-weight: bold;
-            ">+</button>
-          </div>
-          <strong style="color: #10b981;">${formatCurrency(item.precio * item.cantidad)}</strong>
-        </div>
-      </div>
-    `).join('');
-    }
-
-    updatePOSTotal();
-}
-
-function updatePOSTotal() {
-    const subtotal = posCart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    const descuentoPorcentaje = parseFloat(document.getElementById('pos-descuento').value) || 0;
-    const descuentoMonto = subtotal * (descuentoPorcentaje / 100);
-    const total = subtotal - descuentoMonto;
-
-    document.getElementById('pos-subtotal').textContent = formatCurrency(subtotal);
-    document.getElementById('pos-descuento-monto').textContent = formatCurrency(descuentoMonto);
-    document.getElementById('pos-total').textContent = formatCurrency(total);
-}
-
-async function procesarVenta() {
-    const clienteID = document.getElementById('pos-cliente').value;
-
-    if (!clienteID) {
-        showToast('Debe seleccionar un cliente', 'error');
-        return;
-    }
-
-    if (posCart.length === 0) {
-        showToast('El carrito está vacío', 'error');
-        return;
-    }
-
-    try {
-        const descuentoPorcentaje = parseFloat(document.getElementById('pos-descuento').value) || 0;
-        const subtotal = posCart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-        const descuentoMonto = subtotal * (descuentoPorcentaje / 100);
-        const total = subtotal - descuentoMonto;
-
-        // Simulate API call
-        // Example: await apiRequest('/admin/ventas', {
-        //   method: 'POST',
-        //   body: JSON.stringify({ clienteID, items: posCart, descuentoPorcentaje })
-        // });
-
-        const newVenta = {
-            VentaID: ventas.length + 1,
-            NumeroFactura: `FAC-${String(ventas.length + 1).padStart(3, '0')}`,
-            FechaVenta: new Date().toISOString(),
-            ClienteNombre: clientes.find(c => c.ClienteID == clienteID)?.NombreCompleto,
-            CantidadProductos: posCart.reduce((sum, item) => sum + item.cantidad, 0),
-            DescuentoPorcentaje: descuentoPorcentaje,
-            DescuentoBs: descuentoMonto,
-            TotalVentaBs: total,
-            NombreEstado: 'Completado'
-        };
-
-        ventas.unshift(newVenta);
-        renderVentas(ventas);
-        updateStats();
-
-        closeModal('modal-pos');
-        showToast('✓ Venta procesada exitosamente', 'success');
-
-        // Print option
-        if (confirm('¿Desea imprimir la factura?')) {
-            printFactura(newVenta.VentaID);
-        }
-    } catch (err) {
-        console.error('Error procesando venta:', err);
-        showToast('Error al procesar venta', 'error');
-    }
-}
-
-// =============================================
-// VIEW DETAILS & PRINT
-// =============================================
-
-function viewDetalle(ventaID) {
-    const venta = ventas.find(v => v.VentaID === ventaID);
-    if (!venta) return;
-
-    // Simulated details
-    const detalles = [
-        { Producto: 'Llanta Michelin Primacy 4', Cantidad: 2, Precio: 850, Subtotal: 1700 }
-    ];
-
-    const content = `
-    <div style="padding: 20px;">
-      <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1);">
-        <h1 style="color: white; margin-bottom: 10px;">Factura ${venta.NumeroFactura}</h1>
-        <p style="color: rgba(255,255,255,0.7);">${formatDateTime(venta.FechaVenta)}</p>
-      </div>
-
-      <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px;">
-        <strong style="color: white;">Cliente:</strong>
-        <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0;">${venta.ClienteNombre}</p>
-      </div>
-
-      <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
-        <thead>
-          <tr style="background: rgba(255,255,255,0.08);">
-            <th style="padding: 12px; text-align: left; color: white;">Producto</th>
-            <th style="padding: 12px; text-align: center; color: white;">Cant.</th>
-            <th style="padding: 12px; text-align: right; color: white;">Precio</th>
-            <th style="padding: 12px; text-align: right; color: white;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${detalles.map(d => `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <td style="padding: 12px; color: rgba(255,255,255,0.9);">${d.Producto}</td>
-              <td style="padding: 12px; text-align: center; color: rgba(255,255,255,0.9);">${d.Cantidad}</td>
-              <td style="padding: 12px; text-align: right; color: rgba(255,255,255,0.9);">${formatCurrency(d.Precio)}</td>
-              <td style="padding: 12px; text-align: right; color: rgba(255,255,255,0.9);"><strong>${formatCurrency(d.Subtotal)}</strong></td>
+    return `
+            <tr>
+                <td><strong>${venta.NumeroFactura}</strong></td>
+                <td>${new Date(venta.FechaVenta).toLocaleDateString('es-BO')}</td>
+                <td>
+                    <div style="display: flex; flex-direction: column;">
+                        <strong>${venta.NombreCliente}</strong>
+                        <small style="color: rgba(255,255,255,0.5);">${venta.TipoCliente} - ${venta.TipoDocumento}: ${venta.NumeroDocumento}</small>
+                    </div>
+                </td>
+                <td>${venta.CantidadProductos} item(s)</td>
+                <td style="color: #f59e0b;">Bs ${descuentoTotal.toFixed(2)}</td>
+                <td><strong style="color: #10b981;">Bs ${venta.TotalVentaBs.toFixed(2)}</strong></td>
+                <td><span class="badge ${estadoClass}">${venta.Estado}</span></td>
+                <td>
+                    <button class="btn-icon" onclick="verDetalleVenta(${venta.VentaID})" title="Ver Detalle">
+                        👁️
+                    </button>
+                    <button class="btn-icon" onclick="imprimirFactura(${venta.VentaID})" title="Imprimir Factura">
+                        🖨️
+                    </button>
+                    ${venta.Estado === 'Pendiente' ? `
+                        <button class="btn-icon" onclick="cambiarEstadoVenta(${venta.VentaID}, ${venta.EstadoID}, 'Completado')" title="Marcar Completado">
+                            ✅
+                        </button>
+                        <button class="btn-icon" onclick="cambiarEstadoVenta(${venta.VentaID}, ${venta.EstadoID}, 'Cancelado')" title="Cancelar">
+                            ❌
+                        </button>
+                    ` : ''}
+                </td>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div style="margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
-        ${venta.DescuentoPorcentaje > 0 ? `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: rgba(255,255,255,0.7);">Descuento (${venta.DescuentoPorcentaje}%):</span>
-            <strong style="color: #f59e0b;">-${formatCurrency(venta.DescuentoBs)}</strong>
-          </div>
-        ` : ''}
-        <div style="display: flex; justify-content: space-between; font-size: 1.3rem; padding-top: 10px; border-top: 2px solid rgba(255,255,255,0.1);">
-          <span style="color: white; font-weight: 600;">TOTAL:</span>
-          <strong style="color: #10b981;">${formatCurrency(venta.TotalVentaBs)}</strong>
-        </div>
-      </div>
-    </div>
-  `;
-
-    document.getElementById('detalle-venta-content').innerHTML = content;
-    openModal('modal-detalle');
-}
-
-function printFactura(ventaID) {
-    showToast('🖨️ Imprimiendo factura...', 'info');
-    // Implement actual print functionality
-}
-
-function generateReport() {
-    showToast('📊 Generando reporte...', 'info');
-    // Implement report generation
+        `;
+  }).join('');
 }
 
 // =============================================
-// STATS
+// VER DETALLE DE VENTA
 // =============================================
+async function verDetalleVenta(ventaID) {
+  const token = localStorage.getItem('authToken');
+  const modal = document.getElementById('modal-detalle');
+  const content = document.getElementById('detalle-venta-content');
 
-function updateStats() {
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = new Date().toISOString().substring(0, 7);
+  try {
+    // Abrir modal y mostrar loading
+    modal.style.display = 'flex';
+    content.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="spinner"></div><p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando detalle...</p></div>';
 
-    const ventasHoy = ventas.filter(v => v.FechaVenta.startsWith(today));
-    const ventasMes = ventas.filter(v => v.FechaVenta.startsWith(thisMonth));
+    const response = await fetch(`/api/admin/ventas/${ventaID}/detalle`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
 
-    const totalHoy = ventasHoy.reduce((sum, v) => sum + v.TotalVentaBs, 0);
-    const totalMes = ventasMes.reduce((sum, v) => sum + v.TotalVentaBs, 0);
+    if (!response.ok) {
+      throw new Error('Error al obtener detalle de la venta');
+    }
 
-    document.getElementById('stat-ventas-hoy-total').textContent = formatCurrency(totalHoy).replace('Bs ', '');
-    document.getElementById('stat-ventas-mes-total').textContent = formatCurrency(totalMes).replace('Bs ', '');
-    document.getElementById('stat-top-producto').textContent = 'Llanta Michelin';
+    const data = await response.json();
+    const venta = data.venta;
+    const productos = data.productos;
+    const historial = data.historial || []; // Opcional
+
+    content.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                <div>
+                    <h3 style="color: white; margin-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📋 Información General</h3>
+                    <div class="info-group">
+                        <p><strong>Nº Factura:</strong> ${venta.NumeroFactura}</p>
+                        <p><strong>Fecha:</strong> ${new Date(venta.FechaVenta).toLocaleString('es-BO')}</p>
+                        <p><strong>Estado:</strong> <span class="badge badge-${venta.Estado === 'Completado' ? 'success' : venta.Estado === 'Cancelado' ? 'danger' : 'warning'}">${venta.Estado}</span></p>
+                        <p><strong>Método de Pago:</strong> ${venta.MetodoPago}</p>
+                        ${venta.CodigoSeguimiento ? `<p><strong>Código Seguimiento:</strong> <code>${venta.CodigoSeguimiento}</code></p>` : ''}
+                        ${venta.Observaciones ? `<p><strong>Observaciones:</strong> ${venta.Observaciones}</p>` : ''}
+                        ${venta.CodigoCupon ? `<p><strong>Cupón Aplicado:</strong> <code>${venta.CodigoCupon}</code> (${venta.DescripcionCupon || 'N/A'})</p>` : ''}
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="color: white; margin-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px;">👤 Cliente</h3>
+                    <div class="info-group">
+                        <p><strong>Nombre:</strong> ${venta.NombreCliente}</p>
+                        <p><strong>${venta.TipoDocumento}:</strong> ${venta.DocumentoCliente}</p>
+                        <p><strong>Tipo:</strong> ${venta.TipoCliente}</p>
+                    </div>
+                    
+                    <h3 style="color: white; margin: 20px 0 15px; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📍 Dirección de Envío</h3>
+                    <div class="info-group">
+                        <p>${venta.Direccion}</p>
+                        <p>${venta.NombreCiudad}, ${venta.NombreDepartamento}</p>
+                        ${venta.ReferenciaDir ? `<p><em>Ref: ${venta.ReferenciaDir}</em></p>` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="color: white; margin-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📦 Productos</h3>
+            <div class="table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Marca</th>
+                            <th>Especificaciones</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unit.</th>
+                            <th>Descuento</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${productos.map(prod => `
+                            <tr>
+                                <td><code>${prod.CodigoProducto}</code></td>
+                                <td><strong>${prod.NombreProducto}</strong></td>
+                                <td>${prod.NombreMarca || 'N/A'}</td>
+                                <td>${prod.Especificaciones}</td>
+                                <td>${prod.Cantidad}</td>
+                                <td>Bs ${prod.PrecioUnitarioBs.toFixed(2)}</td>
+                                <td style="color: #f59e0b;">Bs ${prod.DescuentoProducto.toFixed(2)}</td>
+                                <td><strong style="color: #10b981;">Bs ${prod.SubtotalBs.toFixed(2)}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7);">Subtotal:</span>
+                    <strong style="color: white;">Bs ${venta.SubtotalVentaBs.toFixed(2)}</strong>
+                </div>
+                ${venta.DescuentoPromocionBs > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7);">Descuento Promoción:</span>
+                    <strong style="color: #f59e0b;">- Bs ${venta.DescuentoPromocionBs.toFixed(2)}</strong>
+                </div>
+                ` : ''}
+                ${venta.DescuentoCuponBs > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7);">Descuento Cupón:</span>
+                    <strong style="color: #f59e0b;">- Bs ${venta.DescuentoCuponBs.toFixed(2)}</strong>
+                </div>
+                ` : ''}
+                ${venta.CostoEnvioBs > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7);">Costo de Envío:</span>
+                    <strong style="color: white;">+ Bs ${venta.CostoEnvioBs.toFixed(2)}</strong>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; font-size: 1.3rem; padding-top: 10px; border-top: 2px solid rgba(255,255,255,0.1);">
+                    <span style="color: white; font-weight: 600;">TOTAL:</span>
+                    <strong style="color: #10b981;">Bs ${venta.TotalVentaBs.toFixed(2)}</strong>
+                </div>
+            </div>
+            
+            ${historial.length > 0 ? `
+                <h3 style="color: white; margin: 30px 0 15px; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📅 Historial de Estados</h3>
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                    ${historial.map(h => `
+                        <div style="padding: 10px; border-left: 3px solid #10b981; margin-bottom: 10px; background: rgba(255,255,255,0.02);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <strong style="color: white;">${h.NombreEstado}</strong>
+                                <span style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">${new Date(h.FechaCambio).toLocaleString('es-BO')}</span>
+                            </div>
+                            ${h.Comentario ? `<p style="color: rgba(255,255,255,0.7); margin: 5px 0 0 0; font-size: 0.9rem;">${h.Comentario}</p>` : ''}
+                            ${h.Usuario ? `<p style="color: rgba(255,255,255,0.5); margin: 5px 0 0 0; font-size: 0.85rem;">Por: ${h.Usuario}</p>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${venta.UsuarioQueRegistro ? `
+                <p style="text-align: center; color: rgba(255,255,255,0.5); margin-top: 20px; font-size: 0.9rem;">
+                    Registrado por: ${venta.UsuarioQueRegistro}
+                </p>
+            ` : ''}
+        `;
+
+  } catch (error) {
+    console.error('Error:', error);
+    content.innerHTML = `<div style="text-align: center; padding: 40px; color: #ef4444;">${error.message}</div>`;
+  }
 }
+
+// =============================================
+// APLICAR FILTROS
+// =============================================
+function aplicarFiltros() {
+  const fechaInicio = document.getElementById('filter-fecha-inicio')?.value;
+  const fechaFin = document.getElementById('filter-fecha-fin')?.value;
+  const estadoFiltro = document.getElementById('filter-estado')?.value;
+
+  let ventasFiltradas = [...ventasGlobal];
+
+  // Filtro por fecha inicio
+  if (fechaInicio) {
+    ventasFiltradas = ventasFiltradas.filter(v =>
+      new Date(v.FechaVenta) >= new Date(fechaInicio)
+    );
+  }
+
+  // Filtro por fecha fin
+  if (fechaFin) {
+    ventasFiltradas = ventasFiltradas.filter(v =>
+      new Date(v.FechaVenta) <= new Date(fechaFin + 'T23:59:59')
+    );
+  }
+
+  // Filtro por estado
+  if (estadoFiltro) {
+    ventasFiltradas = ventasFiltradas.filter(v =>
+      v.Estado === estadoFiltro
+    );
+  }
+
+  renderizarVentas(ventasFiltradas);
+}
+
+// =============================================
+// ESTADÍSTICAS
+// =============================================
+async function cargarEstadisticas() {
+  const token = localStorage.getItem('authToken');
+
+  try {
+    // Ventas de hoy
+    const respHoy = await fetch('/api/admin/stats/ventas-hoy', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const dataHoy = await respHoy.json();
+    document.getElementById('stat-ventas-hoy-total').textContent =
+      dataHoy.TotalVentasHoy?.toFixed(2) || '0.00';
+
+    // Ventas del mes
+    const respMes = await fetch('/api/admin/stats/ventas-mes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const dataMes = await respMes.json();
+    document.getElementById('stat-ventas-mes-total').textContent =
+      dataMes.TotalVentasMes?.toFixed(2) || '0.00';
+
+    // Producto más vendido
+    const respProductos = await fetch('/api/admin/reportes/productos-mas-vendidos', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const productos = await respProductos.json();
+    if (productos.length > 0) {
+      document.getElementById('stat-top-producto').textContent =
+        productos[0].NombreProducto;
+    }
+
+  } catch (error) {
+    console.error('Error cargando estadísticas:', error);
+  }
+}
+
+// =============================================
+// GENERAR REPORTE
+// =============================================
+function generarReporte() {
+  const fechaInicio = document.getElementById('filter-fecha-inicio')?.value || 'Inicio';
+  const fechaFin = document.getElementById('filter-fecha-fin')?.value || 'Fin';
+  const estado = document.getElementById('filter-estado')?.value || 'Todos';
+
+  alert(`Generando reporte de ventas:\n\nPeríodo: ${fechaInicio} - ${fechaFin}\nEstado: ${estado}\n\nEsta funcionalidad se implementará próximamente.`);
+}
+
+// =============================================
+// IMPRIMIR FACTURA
+// =============================================
+function imprimirFactura(ventaID) {
+  alert(`Imprimiendo factura para VentaID: ${ventaID}\n\nEsta funcionalidad se implementará próximamente con generación de PDF.`);
+}
+
+// =============================================
+// CAMBIAR ESTADO DE VENTA
+// =============================================
+async function cambiarEstadoVenta(ventaID, estadoActualID, nuevoEstadoNombre) {
+  const token = localStorage.getItem('authToken');
+
+  // Mapeo de nombres a IDs (ajusta según tus datos reales en EstadosPedido)
+  const estadosMap = {
+    'Completado': 3,  // Ajusta estos IDs según tu tabla EstadosPedido
+    'Cancelado': 4
+  };
+
+  const nuevoEstadoID = estadosMap[nuevoEstadoNombre];
+
+  if (!nuevoEstadoID) {
+    alert('Estado no válido');
+    return;
+  }
+
+  if (!confirm(`¿Estás seguro de cambiar el estado a "${nuevoEstadoNombre}"?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/ventas/${ventaID}/estado`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        estadoID: nuevoEstadoID,
+        observaciones: `Cambiado a ${nuevoEstadoNombre} desde panel de admin`
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al cambiar el estado');
+    }
+
+    alert(`Estado cambiado exitosamente a "${nuevoEstadoNombre}"`);
+
+    // Recargar ventas
+    await cargarVentas();
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error al cambiar el estado de la venta');
+  }
+}
+
+// =============================================
+// MODAL POS (Para implementar después)
+// =============================================
+function abrirModalPOS() {
+  alert('El punto de venta (POS) se implementará próximamente.\n\nPor ahora, las ventas se realizan desde el sitio web del cliente.');
+}
+
+// =============================================
+// HELPERS
+// =============================================
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Hacer funciones globales para los onclick en el HTML
+window.verDetalleVenta = verDetalleVenta;
+window.imprimirFactura = imprimirFactura;
+window.cambiarEstadoVenta = cambiarEstadoVenta;
+window.closeModal = closeModal;

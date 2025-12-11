@@ -153,7 +153,7 @@ app.post('/api/registro/persona', async (req, res) => {
       email: email,
       nombre: `${nombres} ${apellidoPaterno}`,
       rol: 'Cliente',
-      rolID: 2, // Assuming 2 is the RolID for Cliente
+      rolID: 2,
       tipoCliente: 'Persona'
     };
 
@@ -166,21 +166,17 @@ app.post('/api/registro/persona', async (req, res) => {
   } catch (err) {
     console.error('Error en registro persona:', err);
 
-    let errorMessage = 'Error al registrar usuario'; // Mensaje por defecto
-    let statusCode = 500; // Código por defecto
+    let errorMessage = 'Error al registrar usuario';
+    let statusCode = 500;
 
-    // 🟢 CORRECCIÓN CLAVE: Buscar el mensaje específico de SQL Server
     if (err.originalError && err.originalError.info && err.originalError.info.message) {
-      // Capturamos el mensaje de RAISERROR/THROW del SP (ej: "El email ya está registrado", "El cliente debe tener al menos 18 años")
       errorMessage = err.originalError.info.message;
-      statusCode = 400; // Enviamos un 400 (Bad Request) para errores de validación
+      statusCode = 400;
     } else if (err.message) {
-      // Manejo de errores de Node.js (ej: error de hash)
       errorMessage = err.message;
       statusCode = 400;
     }
 
-    // El error de "ya está registrado" también caerá en el 400 con su mensaje específico
     res.status(statusCode).json({ error: errorMessage });
   }
 });
@@ -293,11 +289,10 @@ app.post('/api/login', async (req, res) => {
 // RUTAS DE PERFIL DE USUARIO
 // =============================================
 
-// Obtener perfil completo del usuario (datos personales + dirección)
 app.get('/api/perfil', authenticateToken, async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .input('Email', sql.NVarChar(100), req.user.Email) // Cambiado a Email
+      .input('Email', sql.NVarChar(100), req.user.Email)
       .execute('sp_ObtenerPerfilUsuario');
 
     if (result.recordset.length === 0) {
@@ -307,10 +302,10 @@ app.get('/api/perfil', authenticateToken, async (req, res) => {
     const userData = result.recordset[0];
 
     const formattedData = {
-      nombre: userData.NombreDisplay, // Usando el campo correcto del SP
+      nombre: userData.NombreDisplay,
       email: userData.Email,
       telefono: userData.Telefono,
-      direccion: userData.DireccionID ? { // Solo incluir dirección si existe
+      direccion: userData.DireccionID ? {
         DireccionID: userData.DireccionID,
         NombreDireccion: userData.NombreDireccion,
         Calle: userData.Calle,
@@ -331,7 +326,6 @@ app.get('/api/perfil', authenticateToken, async (req, res) => {
   }
 });
 
-// Actualizar información personal del usuario
 app.put('/api/perfil/usuario', authenticateToken, async (req, res) => {
   const { nombre, telefono } = req.body;
   if (!nombre) {
@@ -356,7 +350,6 @@ app.put('/api/perfil/usuario', authenticateToken, async (req, res) => {
   }
 });
 
-// Crear o actualizar la dirección del usuario
 app.put('/api/perfil/direccion', authenticateToken, async (req, res) => {
   const { DireccionID, NombreDireccion, Calle, Zona, CiudadID, Referencia, EsPrincipal } = req.body;
   if (!NombreDireccion || !Calle || !CiudadID) {
@@ -366,7 +359,7 @@ app.put('/api/perfil/direccion', authenticateToken, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ClienteID', sql.Int, req.user.ClienteID)
-      .input('DireccionID', sql.Int, DireccionID || null) // Puede ser NULL para crear nueva
+      .input('DireccionID', sql.Int, DireccionID || null)
       .input('NombreDireccion', sql.NVarChar(50), NombreDireccion)
       .input('Calle', sql.NVarChar(255), Calle)
       .input('Zona', sql.NVarChar(100), Zona || null)
@@ -383,12 +376,10 @@ app.put('/api/perfil/direccion', authenticateToken, async (req, res) => {
   }
 });
 
-
 // =============================================
 // RUTAS DE GEOGRAFÍA (BOLIVIA)
 // =============================================
 
-// Obtener departamentos
 app.get('/api/departamentos', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -400,7 +391,6 @@ app.get('/api/departamentos', async (req, res) => {
   }
 });
 
-// Obtener ciudades por departamento
 app.get('/api/ciudades/:departamentoID', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -417,7 +407,6 @@ app.get('/api/ciudades/:departamentoID', async (req, res) => {
 // RUTAS DE VEHÍCULOS
 // =============================================
 
-// Obtener marcas de vehículos
 app.get('/api/vehiculos/marcas', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -432,9 +421,7 @@ app.get('/api/vehiculos/marcas', async (req, res) => {
 app.get('/api/vehiculos/modelos/:marcaID', async (req, res) => {
   try {
     const result = await sqlPool.request()
-      // CORRECCIÓN 1: El SP espera 'MarcaID'
       .input('MarcaID', sql.Int, req.params.marcaID)
-      // CORRECCIÓN 2: El SP se llama 'sp_ObtenerModelosVehiculos'
       .execute('sp_ObtenerModelosVehiculos');
     res.json(result.recordset);
   } catch (err) {
@@ -443,13 +430,11 @@ app.get('/api/vehiculos/modelos/:marcaID', async (req, res) => {
   }
 });
 
-
-// Obtener AÑOS por modelo (Usando el nuevo SP)
 app.get('/api/vehiculos/anios/:modeloID', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ModeloVehiculoID', sql.Int, req.params.modeloID)
-      .execute('sp_ObtenerAniosVehiculo'); // <<-- Nuevo SP
+      .execute('sp_ObtenerAniosVehiculo');
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo años:', err);
@@ -457,36 +442,26 @@ app.get('/api/vehiculos/anios/:modeloID', async (req, res) => {
   }
 });
 
-
-
-
 // =============================================
 // RUTAS DE PRODUCTOS
 // =============================================
 
 app.get('/api/productos/compatibles/:modeloID/:anio', async (req, res) => {
   try {
-
-    console.log("DEBUG - Entrando a productos compatibles");
-    console.log("modeloID (raw):", req.params.modeloID);
-    console.log("anio (raw):", req.params.anio);
-
     const { modeloID, anio } = req.params;
 
     const result = await sqlPool.request()
       .input('ModeloVehiculoID', sql.Int, modeloID)
       .input('Anio', sql.Int, anio)
-
       .execute('sp_ObtenerLlantasCompatibles');
 
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error obteniendo productos compatibles por modelo/año:', err);
+    console.error('Error obteniendo productos compatibles:', err);
     res.status(500).json({ error: 'Error al obtener productos compatibles' });
   }
 });
 
-// Obtener productos destacados
 app.get('/api/productos/destacados', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -510,6 +485,17 @@ app.get('/api/productos/destacados', async (req, res) => {
   } catch (err) {
     console.error('Error obteniendo productos destacados:', err);
     res.status(500).json({ error: 'Error al obtener productos' });
+  }
+});
+
+app.get('/api/productos', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerProductosCatalogo');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo productos del catálogo:', err);
+    res.status(500).json({ error: 'No se pudo cargar el catálogo de productos.' });
   }
 });
 
@@ -592,7 +578,7 @@ app.post('/api/carrito/:sessionId/agregar', async (req, res) => {
 app.put('/api/carrito/:sessionId/actualizar', async (req, res) => {
   try {
     const { productoID, cantidad } = req.body;
-    const productoIdNum = parseInt(productoID, 10); // Asegurar que sea un número
+    const productoIdNum = parseInt(productoID, 10);
 
     const carrito = await CarritoTemporal.findOne({ sessionId: req.params.sessionId });
 
@@ -608,9 +594,6 @@ app.put('/api/carrito/:sessionId/actualizar', async (req, res) => {
       if (itemIndex > -1) {
         carrito.items[itemIndex].cantidad = cantidad;
         carrito.items[itemIndex].subtotal = carrito.items[itemIndex].cantidad * carrito.items[itemIndex].precio;
-      } else if (cantidad > 0) {
-        // Opcional: si el item no se encuentra, no hacer nada o agregarlo. Por ahora no hacemos nada.
-        console.warn(`Intento de actualizar producto ${productoIdNum} que no está en el carrito.`);
       }
     }
 
@@ -700,7 +683,7 @@ app.post('/api/direcciones', authenticateToken, async (req, res) => {
 });
 
 // =============================================
-// RUTAS DE VENTAS
+// RUTAS DE VENTAS (CLIENTE)
 // =============================================
 
 app.post('/api/ventas', authenticateToken, async (req, res) => {
@@ -828,110 +811,6 @@ app.get('/api/ventas/:ventaID', authenticateToken, async (req, res) => {
   }
 });
 
-// =============================================
-// RUTAS DE ADMINISTRACIÓN
-// =============================================
-
-// Nuevos endpoints para estadísticas del dashboard
-app.get('/api/admin/stats/productos-total', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request().execute('sp_ContarProductosActivos');
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error obteniendo total de productos:', err);
-    res.status(500).json({ error: 'Error al obtener el total de productos.' });
-  }
-});
-
-app.get('/api/admin/stats/clientes-total', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request().execute('sp_ContarClientes');
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error obteniendo total de clientes:', err);
-    res.status(500).json({ error: 'Error al obtener el total de clientes.' });
-  }
-});
-
-app.get('/api/admin/stats/ventas-mes', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request().execute('sp_ObtenerVentasDelMes');
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error obteniendo ventas del mes:', err);
-    res.status(500).json({ error: 'Error al obtener las ventas del mes.' });
-  }
-});
-
-app.get('/api/admin/stats/ventas-hoy', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request().execute('SP_CantidadVentasHoy');
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error('Error obteniendo transacciones de ventas de hoy:', err);
-    res.status(500).json({ error: 'Error al obtener las transacciones de ventas de hoy.' });
-  }
-});
-
-app.get('/api/admin/ventas', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request()
-      .query('SELECT * FROM vw_HistorialComprasCliente ORDER BY FechaVenta DESC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo ventas:', err);
-    res.status(500).json({ error: 'Error al obtener ventas' });
-  }
-});
-
-app.get('/api/admin/reportes/ventas-diarias', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request()
-      .query('SELECT TOP 30 * FROM vw_VentasDiarias ORDER BY Fecha DESC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo reporte:', err);
-    res.status(500).json({ error: 'Error al obtener reporte' });
-  }
-});
-
-app.get('/api/admin/reportes/productos-mas-vendidos', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request()
-      .query('SELECT TOP 20 * FROM vw_ProductosMasVendidos ORDER BY CantidadVendida DESC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo reporte:', err);
-    res.status(500).json({ error: 'Error al obtener reporte' });
-  }
-});
-
-app.get('/api/admin/reportes/stock-bajo', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request()
-      .query('SELECT * FROM vw_ProductosStockBajo ORDER BY StockActual ASC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo reporte:', err);
-    res.status(500).json({ error: 'Error al obtener reporte' });
-  }
-});
-
-app.get('/api/admin/reportes/ventas-ciudad', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const result = await sqlPool.request()
-      .query('SELECT * FROM vw_VentasPorCiudad ORDER BY TotalVentasBs DESC');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo reporte:', err);
-    res.status(500).json({ error: 'Error al obtener reporte' });
-  }
-});
-
-// =============================================
-// OBTENER MÉTODOS DE PAGO
-// =============================================
-
 app.get('/api/metodos-pago', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -943,128 +822,317 @@ app.get('/api/metodos-pago', async (req, res) => {
   }
 });
 
-app.get('/api/productos', async (req, res) => {
+// =============================================
+// ADMINISTRACIÓN - VENTAS
+// =============================================
+
+app.get('/api/admin/ventas', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .execute('sp_ObtenerProductosCatalogo');
-
-    // Los resultados ya están filtrados por la VIEW y el SP
+      .query('SELECT * FROM vw_HistorialVentasAdmin ORDER BY FechaVenta DESC');
     res.json(result.recordset);
-
   } catch (err) {
-    console.error('Error obteniendo productos del catálogo:', err);
-    // Usamos 500 para error interno del servidor
-    res.status(500).json({ error: 'No se pudo cargar el catálogo de productos.' });
+    console.error('Error obteniendo ventas:', err);
+    res.status(500).json({ error: 'Error al obtener ventas' });
   }
 });
 
-
-app.get('/api/admin/categorias', async (req, res) => {
-  // [Aquí debe ir su middleware de checkAdminAuth]
+app.get('/api/admin/ventas/:ventaID/detalle', authenticateToken, requireAdmin, async (req, res) => {
   try {
+    const { ventaID } = req.params;
+
     const result = await sqlPool.request()
-      .execute('sp_ObtenerCategoriasConProductos');
+      .input('VentaID', sql.Int, ventaID)
+      .execute('sp_ObtenerDetalleVentaAdmin');
 
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo todas las categorías:', err);
-    res.status(500).json({ error: 'Error al obtener la lista de categorías.' });
-  }
-});
+    const venta = result.recordsets[0][0];
+    const productos = result.recordsets[1];
+    const historial = result.recordsets[2] || [];
 
-
-// En server.js
-
-// 1. ENDPOINT PARA CARGAR LA TABLA PRINCIPAL DE CLIENTES
-app.get('/api/admin/clientes', async (req, res) => {
-  // Middleware de seguridad
-  try {
-    const result = await sqlPool.request()
-      .execute('sp_ObtenerClientesAdmin');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('Error obteniendo clientes para admin:', err);
-    res.status(500).json({ error: 'Error al cargar la lista de clientes.' });
-  }
-});
-
-// 2. ENDPOINT PARA CARGAR EL HISTORIAL DE UN CLIENTE ESPECÍFICO
-app.get('/api/admin/clientes/:clienteID/historial', async (req, res) => {
-  // Middleware de seguridad
-  const clienteID = req.params.clienteID;
-  try {
-    const result = await sqlPool.request()
-      .input('ClienteID', sql.Int, clienteID) // Pasa el parámetro al SP
-      .execute('sp_ObtenerHistorialVentasCliente');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error(`Error obteniendo historial para ClienteID ${clienteID}:`, err);
-    res.status(500).json({ error: 'Error al cargar el historial de ventas.' });
-  }
-});
-
-app.post('/api/admin/productos', async (req, res) => {
-  // NOTA: Aquí debería haber un middleware de autenticación y autorización (Admin)
-  try {
-    const {
-      CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID,
-      PrecioCompraBs, PrecioVentaBs, StockActual, StockMinimo,
-      Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad,
-      Destacado, UsuarioID
-    } = req.body;
-
-    // Validación básica de campos obligatorios
-    if (!CodigoProducto || !NombreProducto || PrecioCompraBs === undefined || PrecioVentaBs === undefined || StockActual === undefined || StockMinimo === undefined || Destacado === undefined || UsuarioID === undefined) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios para el producto.' });
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
     }
 
-    const request = sqlPool.request();
-
-    // Mapeo de parámetros al Stored Procedure
-    request.input('CodigoProducto', sql.NVarChar(50), CodigoProducto);
-    request.input('NombreProducto', sql.NVarChar(200), NombreProducto);
-    request.input('Descripcion', sql.NVarChar(1000), Descripcion);
-
-    // IDs opcionales (pueden ser NULL)
-    request.input('CategoriaID', sql.Int, CategoriaID || null);
-    request.input('MarcaID', sql.Int, MarcaID || null);
-
-    // Valores numéricos
-    request.input('PrecioCompraBs', sql.Decimal(10, 2), PrecioCompraBs);
-    request.input('PrecioVentaBs', sql.Decimal(10, 2), PrecioVentaBs);
-    request.input('StockActual', sql.Int, StockActual);
-    request.input('StockMinimo', sql.Int, StockMinimo);
-
-    // Parámetros de Llanta (opcionales - INT y NVARCHAR)
-    request.input('Ancho', sql.Int, Ancho || null);
-    request.input('Perfil', sql.Int, Perfil || null);
-    request.input('DiametroRin', sql.Int, DiametroRin || null);
-    request.input('IndiceCarga', sql.NVarChar(10), IndiceCarga || null);
-    request.input('IndiceVelocidad', sql.NVarChar(5), IndiceVelocidad || null);
-
-    // Parámetros Adicionales
-    request.input('Destacado', sql.Bit, Destacado);
-    request.input('UsuarioID', sql.Int, UsuarioID); // Asumiendo que el ID del usuario que realiza el cambio se pasa
-
-    // Ejecutar el procedimiento
-    const result = await request.execute('sp_CrearOActualizarProducto2');
-
-    // El SP devuelve el ProductoID y la Operacion ('CREADO' o 'ACTUALIZADO')
-    const productoInfo = result.recordset[0];
-
-    res.status(200).json({
-      message: `Producto ${productoInfo.Operacion.toLowerCase()} con éxito.`,
-      productoID: productoInfo.ProductoID,
-      operacion: productoInfo.Operacion
-    });
-
+    res.json({ venta, productos, historial });
   } catch (err) {
-    console.error('Error al crear/actualizar producto:', err);
-    res.status(500).json({ error: 'Error en el servidor al procesar la solicitud del producto.' });
+    console.error('Error obteniendo detalle de venta:', err);
+    res.status(500).json({ error: 'Error al obtener detalle de venta' });
   }
 });
 
-// Obtener todos los productos (Admin)
+app.patch('/api/admin/ventas/:ventaID/estado', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { ventaID } = req.params;
+    const { estadoID, observaciones } = req.body;
+
+    if (!estadoID) {
+      return res.status(400).json({ error: 'El estadoID es requerido' });
+    }
+
+    const result = await sqlPool.request()
+      .input('VentaID', sql.Int, ventaID)
+      .input('NuevoEstadoID', sql.Int, estadoID)
+      .input('UsuarioID', sql.Int, req.user.UsuarioID)
+      .input('Comentario', sql.NVarChar(500), observaciones || null)
+      .execute('sp_CambiarEstadoVenta');
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Estado de venta actualizado correctamente',
+      venta: result.recordset[0]
+    });
+  } catch (err) {
+    console.error('Error actualizando estado de venta:', err);
+    res.status(500).json({ error: 'Error al actualizar estado de venta' });
+  }
+});
+
+app.get('/api/admin/estados-pedido', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query('SELECT EstadoID, NombreEstado, Descripcion, Orden FROM EstadosPedido ORDER BY Orden');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo estados:', err);
+    res.status(500).json({ error: 'Error al obtener estados' });
+  }
+});
+
+app.patch('/api/admin/ventas/:ventaID/seguimiento', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { ventaID } = req.params;
+    const { codigoSeguimiento } = req.body;
+
+    if (!codigoSeguimiento) {
+      return res.status(400).json({ error: 'El código de seguimiento es requerido' });
+    }
+
+    const result = await sqlPool.request()
+      .input('VentaID', sql.Int, ventaID)
+      .input('CodigoSeguimiento', sql.NVarChar(100), codigoSeguimiento)
+      .query('UPDATE Ventas SET CodigoSeguimiento = @CodigoSeguimiento WHERE VentaID = @VentaID');
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+
+    res.json({ success: true, message: 'Código de seguimiento actualizado correctamente' });
+  } catch (err) {
+    console.error('Error actualizando código de seguimiento:', err);
+    res.status(500).json({ error: 'Error al actualizar código de seguimiento' });
+  }
+});
+
+app.get('/api/admin/ventas/buscar', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { termino } = req.query;
+
+    if (!termino || termino.length < 3) {
+      return res.status(400).json({ error: 'El término de búsqueda debe tener al menos 3 caracteres' });
+    }
+
+    const result = await sqlPool.request()
+      .input('Termino', sql.NVarChar(100), `%${termino}%`)
+      .query(`
+        SELECT * FROM vw_HistorialVentasAdmin
+        WHERE NumeroFactura LIKE @Termino
+           OR NombreCliente LIKE @Termino
+           OR NumeroDocumento LIKE @Termino
+        ORDER BY FechaVenta DESC
+      `);
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error buscando ventas:', err);
+    res.status(500).json({ error: 'Error al buscar ventas' });
+  }
+});
+
+app.get('/api/admin/ventas/rango', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Se requieren fechaInicio y fechaFin' });
+    }
+
+    const result = await sqlPool.request()
+      .input('FechaInicio', sql.Date, fechaInicio)
+      .input('FechaFin', sql.Date, fechaFin)
+      .query(`
+        SELECT * FROM vw_HistorialVentasAdmin
+        WHERE CAST(FechaVenta AS DATE) BETWEEN @FechaInicio AND @FechaFin
+        ORDER BY FechaVenta DESC
+      `);
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo ventas por rango:', err);
+    res.status(500).json({ error: 'Error al obtener ventas' });
+  }
+});
+
+// =============================================
+// ADMINISTRACIÓN - ESTADÍSTICAS
+// =============================================
+
+app.get('/api/admin/stats/ventas-hoy', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT 
+          COUNT(*) AS CantidadVentasHoy,
+          COALESCE(SUM(TotalVentaBs), 0) AS TotalVentasHoy
+        FROM Ventas
+        WHERE CAST(FechaVenta AS DATE) = CAST(GETDATE() AS DATE)
+      `);
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo ventas de hoy:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas de ventas' });
+  }
+});
+
+app.get('/api/admin/stats/ventas-mes', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT 
+          COUNT(*) AS CantidadVentasMes,
+          COALESCE(SUM(TotalVentaBs), 0) AS TotalVentasMes
+        FROM Ventas
+        WHERE YEAR(FechaVenta) = YEAR(GETDATE())
+          AND MONTH(FechaVenta) = MONTH(GETDATE())
+      `);
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo ventas del mes:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas de ventas' });
+  }
+});
+
+app.get('/api/admin/stats/productos-total', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query('SELECT COUNT(*) AS TotalProductos FROM Productos WHERE Activo = 1');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo total de productos:', err);
+    res.status(500).json({ error: 'Error al obtener el total de productos.' });
+  }
+});
+
+app.get('/api/admin/stats/clientes-total', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query('SELECT COUNT(*) AS TotalClientes FROM Clientes');
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo total de clientes:', err);
+    res.status(500).json({ error: 'Error al obtener el total de clientes.' });
+  }
+});
+
+// =============================================
+// ADMINISTRACIÓN - REPORTES
+// =============================================
+
+app.get('/api/admin/reportes/productos-mas-vendidos', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT TOP 20
+          p.ProductoID,
+          p.NombreProducto,
+          p.CodigoProducto,
+          m.NombreMarca,
+          SUM(dv.Cantidad) AS CantidadVendida,
+          SUM(dv.SubtotalBs) AS TotalVendido
+        FROM DetalleVentas dv
+        INNER JOIN Productos p ON dv.ProductoID = p.ProductoID
+        INNER JOIN Ventas v ON dv.VentaID = v.VentaID
+        LEFT JOIN Marcas m ON p.MarcaID = m.MarcaID
+        WHERE YEAR(v.FechaVenta) = YEAR(GETDATE())
+          AND MONTH(v.FechaVenta) = MONTH(GETDATE())
+        GROUP BY p.ProductoID, p.NombreProducto, p.CodigoProducto, m.NombreMarca
+        ORDER BY CantidadVendida DESC
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo productos más vendidos:', err);
+    res.status(500).json({ error: 'Error al obtener reporte' });
+  }
+});
+
+app.get('/api/admin/reportes/ventas-diarias', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT TOP 30
+          CAST(FechaVenta AS DATE) AS Fecha,
+          COUNT(*) AS CantidadVentas,
+          SUM(TotalVentaBs) AS TotalVentasBs
+        FROM Ventas
+        GROUP BY CAST(FechaVenta AS DATE)
+        ORDER BY Fecha DESC
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo reporte:', err);
+    res.status(500).json({ error: 'Error al obtener reporte' });
+  }
+});
+
+app.get('/api/admin/reportes/stock-bajo', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT 
+          ProductoID,
+          CodigoProducto,
+          NombreProducto,
+          StockActual,
+          StockMinimo
+        FROM Productos
+        WHERE StockActual <= StockMinimo AND Activo = 1
+        ORDER BY StockActual ASC
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo reporte:', err);
+    res.status(500).json({ error: 'Error al obtener reporte' });
+  }
+});
+
+app.get('/api/admin/reportes/ventas-ciudad', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .query(`
+        SELECT 
+          c.NombreCiudad,
+          COUNT(v.VentaID) AS CantidadVentas,
+          SUM(v.TotalVentaBs) AS TotalVentasBs
+        FROM Ventas v
+        INNER JOIN Direcciones d ON v.DireccionEnvioID = d.DireccionID
+        INNER JOIN Ciudades c ON d.CiudadID = c.CiudadID
+        GROUP BY c.NombreCiudad
+        ORDER BY TotalVentasBs DESC
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo reporte:', err);
+    res.status(500).json({ error: 'Error al obtener reporte' });
+  }
+});
+
+// =============================================
+// ADMINISTRACIÓN - PRODUCTOS
+// =============================================
+
 app.get('/api/admin/productos', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -1102,7 +1170,6 @@ app.get('/api/admin/productos', async (req, res) => {
   }
 });
 
-// Obtener un producto específico (Admin)
 app.get('/api/admin/productos/:id', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -1140,16 +1207,61 @@ app.get('/api/admin/productos/:id', async (req, res) => {
   }
 });
 
-// Eliminar producto (Admin) - Eliminación lógica
+app.post('/api/admin/productos', async (req, res) => {
+  try {
+    const {
+      CodigoProducto, NombreProducto, Descripcion, CategoriaID, MarcaID,
+      PrecioCompraBs, PrecioVentaBs, StockActual, StockMinimo,
+      Ancho, Perfil, DiametroRin, IndiceCarga, IndiceVelocidad,
+      Destacado, UsuarioID
+    } = req.body;
+
+    if (!CodigoProducto || !NombreProducto || PrecioCompraBs === undefined ||
+      PrecioVentaBs === undefined || StockActual === undefined ||
+      StockMinimo === undefined || Destacado === undefined || UsuarioID === undefined) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios para el producto.' });
+    }
+
+    const request = sqlPool.request();
+
+    request.input('CodigoProducto', sql.NVarChar(50), CodigoProducto);
+    request.input('NombreProducto', sql.NVarChar(200), NombreProducto);
+    request.input('Descripcion', sql.NVarChar(1000), Descripcion);
+    request.input('CategoriaID', sql.Int, CategoriaID || null);
+    request.input('MarcaID', sql.Int, MarcaID || null);
+    request.input('PrecioCompraBs', sql.Decimal(10, 2), PrecioCompraBs);
+    request.input('PrecioVentaBs', sql.Decimal(10, 2), PrecioVentaBs);
+    request.input('StockActual', sql.Int, StockActual);
+    request.input('StockMinimo', sql.Int, StockMinimo);
+    request.input('Ancho', sql.Int, Ancho || null);
+    request.input('Perfil', sql.Int, Perfil || null);
+    request.input('DiametroRin', sql.Int, DiametroRin || null);
+    request.input('IndiceCarga', sql.NVarChar(10), IndiceCarga || null);
+    request.input('IndiceVelocidad', sql.NVarChar(5), IndiceVelocidad || null);
+    request.input('Destacado', sql.Bit, Destacado);
+    request.input('UsuarioID', sql.Int, UsuarioID);
+
+    const result = await request.execute('sp_CrearOActualizarProducto2');
+
+    const productoInfo = result.recordset[0];
+
+    res.status(200).json({
+      message: `Producto ${productoInfo.Operacion.toLowerCase()} con éxito.`,
+      productoID: productoInfo.ProductoID,
+      operacion: productoInfo.Operacion
+    });
+
+  } catch (err) {
+    console.error('Error al crear/actualizar producto:', err);
+    res.status(500).json({ error: 'Error en el servidor al procesar la solicitud del producto.' });
+  }
+});
+
 app.delete('/api/admin/productos/:id', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ProductoID', sql.Int, req.params.id)
-      .query(`
-        UPDATE Productos 
-        SET Activo = 0 
-        WHERE ProductoID = @ProductoID
-      `);
+      .query('UPDATE Productos SET Activo = 0 WHERE ProductoID = @ProductoID');
 
     if (result.rowsAffected[0] === 0) {
       return res.status(404).json({ error: 'Producto no encontrado' });
@@ -1162,7 +1274,49 @@ app.delete('/api/admin/productos/:id', async (req, res) => {
   }
 });
 
-// Obtener todas las marcas (Admin)
+// =============================================
+// ADMINISTRACIÓN - CLIENTES
+// =============================================
+
+app.get('/api/admin/clientes', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerClientesAdmin');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo clientes:', err);
+    res.status(500).json({ error: 'Error al cargar la lista de clientes.' });
+  }
+});
+
+app.get('/api/admin/clientes/:clienteID/historial', async (req, res) => {
+  const clienteID = req.params.clienteID;
+  try {
+    const result = await sqlPool.request()
+      .input('ClienteID', sql.Int, clienteID)
+      .execute('sp_ObtenerHistorialVentasCliente');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(`Error obteniendo historial para ClienteID ${clienteID}:`, err);
+    res.status(500).json({ error: 'Error al cargar el historial de ventas.' });
+  }
+});
+
+// =============================================
+// ADMINISTRACIÓN - CATEGORÍAS Y MARCAS
+// =============================================
+
+app.get('/api/admin/categorias', async (req, res) => {
+  try {
+    const result = await sqlPool.request()
+      .execute('sp_ObtenerCategoriasConProductos');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error obteniendo categorías:', err);
+    res.status(500).json({ error: 'Error al obtener la lista de categorías.' });
+  }
+});
+
 app.get('/api/admin/marcas', async (req, res) => {
   try {
     const result = await sqlPool.request()
@@ -1173,118 +1327,6 @@ app.get('/api/admin/marcas', async (req, res) => {
     res.status(500).json({ error: 'Error al obtener marcas' });
   }
 });
-
-
-
-
-app.get("/direcciones/departamentos", async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().execute("SP_ObtenerDepartamentos");
-
-    res.json(result.recordset);
-  } catch (err) {
-    console.error("Error SP_ObtenerDepartamentos:", err);
-    res.status(500).json({ error: "Error al obtener departamentos" });
-  }
-});
-
-// ========================================
-// 2. OBTENER CIUDADES POR DEPARTAMENTO
-// ========================================
-app.get("/direcciones/ciudades/:departamentoID", async (req, res) => {
-  const { departamentoID } = req.params;
-
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input("DepartamentoID", sql.Int, departamentoID)
-      .execute("SP_ObtenerCiudadesPorDepartamento");
-
-    res.json(result.recordset);
-  } catch (err) {
-    console.error("Error SP_ObtenerCiudadesPorDepartamento:", err);
-    res.status(500).json({ error: "Error al obtener ciudades" });
-  }
-});
-
-// ========================================
-// 3. OBTENER DIRECCIONES POR CLIENTE
-// ========================================
-app.get("/direcciones/cliente/:clienteID", async (req, res) => {
-  const { clienteID } = req.params;
-
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input("ClienteID", sql.Int, clienteID)
-      .execute("SP_ObtenerDireccionesPorCliente");
-
-    res.json(result.recordset);
-  } catch (err) {
-    console.error("Error SP_ObtenerDireccionesPorCliente:", err);
-    res.status(500).json({ error: "Error al obtener direcciones del cliente" });
-  }
-});
-
-// ========================================
-// 4. GUARDAR DIRECCION (CREAR o ACTUALIZAR)
-// ========================================
-app.post("/direcciones/guardar", async (req, res) => {
-  const {
-    DireccionID,
-    ClienteID,
-    NombreDireccion,
-    Calle,
-    Zona,
-    CiudadID,
-    Referencia,
-    EsPrincipal
-  } = req.body;
-
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input("DireccionID", sql.Int, DireccionID || null)
-      .input("ClienteID", sql.Int, ClienteID)
-      .input("NombreDireccion", sql.NVarChar(50), NombreDireccion)
-      .input("Calle", sql.NVarChar(255), Calle)
-      .input("Zona", sql.NVarChar(100), Zona)
-      .input("CiudadID", sql.Int, CiudadID)
-      .input("Referencia", sql.NVarChar(255), Referencia)
-      .input("EsPrincipal", sql.Bit, EsPrincipal)
-      .execute("SP_GuardarDireccion");
-
-    res.json(result.recordset[0]);
-  } catch (err) {
-    console.error("Error SP_GuardarDireccion:", err);
-    res.status(500).json({ error: "Error al guardar la dirección" });
-  }
-});
-
-// ========================================
-// 5. ELIMINAR DIRECCIÓN (soft delete)
-// ========================================
-app.delete("/direcciones/eliminar/:direccionID", async (req, res) => {
-  const { direccionID } = req.params;
-
-  try {
-    const pool = await getPool();
-    await pool.request()
-      .input("DireccionID", sql.Int, direccionID)
-      .execute("SP_EliminarDireccion");
-
-    res.json({ mensaje: "Dirección eliminada correctamente" });
-  } catch (err) {
-    console.error("Error SP_EliminarDireccion:", err);
-    res.status(500).json({ error: "Error al eliminar la dirección" });
-  }
-});
-
-
-
-
-
 
 // =============================================
 // INICIAR SERVIDOR
@@ -1299,4 +1341,3 @@ connectDatabases().then(() => {
 process.on('unhandledRejection', (err) => {
   console.error('Error no manejado:', err);
 });
-
