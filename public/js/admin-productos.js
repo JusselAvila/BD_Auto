@@ -1,6 +1,10 @@
 // =======================================================
 // AVILA'S TYRE COMPANY - PANEL ADMIN - PRODUCTOS
+// Versión corregida con autenticación
 // =======================================================
+
+// Verificar autenticación al cargar
+checkAdminAuth();
 
 // ===============================
 // UTILIDADES
@@ -36,11 +40,14 @@ function closeModal(id) {
 // =======================================================
 async function loadProductos() {
     try {
-        const res = await fetch("/api/admin/productos");
-        const data = await res.json();
+        showLoading('#productos-table tbody');
 
-        if (!res.ok) {
+        const response = await apiRequest("/admin/productos");
+        const data = await response.json();
+
+        if (!response.ok) {
             showToast("❌ Error cargando productos", "error");
+            showError('#productos-table tbody', 'Error al cargar productos');
             return;
         }
 
@@ -58,12 +65,12 @@ async function loadProductos() {
 
             tbody.innerHTML += `
                 <tr>
-                    <td>${p.CodigoProducto}</td>
-                    <td>${p.NombreProducto}</td>
-                    <td>${p.NombreCategoria || 'N/A'}</td>
-                    <td>${p.NombreMarca || 'N/A'}</td>
-                    <td>${p.PrecioVentaBs.toFixed(2)}</td>
-                    <td>${p.StockActual}</td>
+                    <td>${p.CodigoProducto || p.Codigo}</td>
+                    <td>${p.NombreProducto || p.Producto}</td>
+                    <td>${p.NombreCategoria || p.Categoria || 'N/A'}</td>
+                    <td>${p.NombreMarca || p.Marca || 'N/A'}</td>
+                    <td>Bs ${parseFloat(p.PrecioVentaBs || p.PrecioBs).toFixed(2)}</td>
+                    <td>${p.StockActual || p.Stock}</td>
                     <td><span class="badge ${stockClass}">${stockLabel}</span></td>
                     <td>
                         <button class="btn-icon" onclick="editarProducto(${p.ProductoID})" title="Editar">✏️</button>
@@ -74,8 +81,9 @@ async function loadProductos() {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('Error al cargar productos:', err);
         showToast("❌ Error al conectar con el servidor", "error");
+        showError('#productos-table tbody', 'Error al cargar productos');
     }
 }
 
@@ -88,14 +96,15 @@ async function loadCategorias() {
     select.innerHTML = `<option value="">Seleccione...</option>`;
 
     try {
-        const res = await fetch("/api/admin/categorias");
-        const data = await res.json();
+        const response = await apiRequest("/admin/categorias");
+        const data = await response.json();
 
         data.forEach(cat => {
             select.innerHTML += `<option value="${cat.CategoriaID}">${cat.NombreCategoria}</option>`;
         });
     } catch (err) {
         console.error("Error cargando categorías:", err);
+        showToast("Error al cargar categorías", "error");
     }
 }
 
@@ -104,14 +113,15 @@ async function loadMarcas() {
     select.innerHTML = `<option value="">Seleccione...</option>`;
 
     try {
-        const res = await fetch("/api/admin/marcas");
-        const data = await res.json();
+        const response = await apiRequest("/admin/marcas");
+        const data = await response.json();
 
         data.forEach(m => {
             select.innerHTML += `<option value="${m.MarcaID}">${m.NombreMarca}</option>`;
         });
     } catch (err) {
         console.error("Error cargando marcas:", err);
+        showToast("Error al cargar marcas", "error");
     }
 }
 
@@ -148,10 +158,10 @@ function nuevoProducto() {
 // =======================================================
 async function editarProducto(id) {
     try {
-        const res = await fetch(`/api/admin/productos/${id}`);
-        const p = await res.json();
+        const response = await apiRequest(`/admin/productos/${id}`);
+        const p = await response.json();
 
-        if (!res.ok) {
+        if (!response.ok) {
             showToast("❌ No se pudo cargar el producto", "error");
             return;
         }
@@ -161,8 +171,8 @@ async function editarProducto(id) {
         document.getElementById('producto-nombre').value = p.NombreProducto;
         document.getElementById('producto-descripcion').value = p.Descripcion || "";
 
-        document.getElementById('producto-categoria-id').value = p.CategoriaID;
-        document.getElementById('producto-marca-id').value = p.MarcaID;
+        document.getElementById('producto-categoria-id').value = p.CategoriaID || "";
+        document.getElementById('producto-marca-id').value = p.MarcaID || "";
 
         document.getElementById('producto-precio-compra').value = p.PrecioCompraBs;
         document.getElementById('producto-precio-venta').value = p.PrecioVentaBs;
@@ -183,7 +193,7 @@ async function editarProducto(id) {
         openModal("modal-producto");
 
     } catch (err) {
-        console.error(err);
+        console.error('Error al cargar producto:', err);
         showToast("❌ Error al conectar con el servidor", "error");
     }
 }
@@ -223,14 +233,24 @@ async function saveProducto() {
             UsuarioID: 1
         };
 
+        // Validación básica
         if (!data.CodigoProducto || !data.NombreProducto) {
             showToast('❌ Código y nombre son obligatorios', 'error');
             return;
         }
 
-        const response = await fetch(`/api/admin/productos`, {
+        if (isNaN(data.PrecioCompraBs) || isNaN(data.PrecioVentaBs)) {
+            showToast('❌ Los precios deben ser números válidos', 'error');
+            return;
+        }
+
+        if (isNaN(data.StockActual) || isNaN(data.StockMinimo)) {
+            showToast('❌ Los stocks deben ser números válidos', 'error');
+            return;
+        }
+
+        const response = await apiRequest(`/admin/productos`, {
             method: 'POST',
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         });
 
@@ -261,19 +281,22 @@ async function eliminarProducto(id) {
     if (!confirm("¿Seguro que quieres eliminar este producto?")) return;
 
     try {
-        const res = await fetch(`/api/admin/productos/${id}`, { method: "DELETE" });
-        const result = await res.json();
+        const response = await apiRequest(`/admin/productos/${id}`, {
+            method: "DELETE"
+        });
 
-        if (!res.ok) {
-            showToast("❌ No se pudo eliminar", "error");
+        const result = await response.json();
+
+        if (!response.ok) {
+            showToast("❌ No se pudo eliminar: " + (result.error || "Error desconocido"), "error");
             return;
         }
 
-        showToast("✔️ Producto eliminado", "success");
-        loadProductos();
+        showToast("✔️ Producto eliminado correctamente", "success");
+        await loadProductos();
 
     } catch (err) {
-        console.error(err);
+        console.error('Error al eliminar producto:', err);
         showToast("❌ Error al conectar con el servidor", "error");
     }
 }
@@ -284,16 +307,33 @@ async function eliminarProducto(id) {
 // INICIALIZACIÓN
 // =======================================================
 document.addEventListener("DOMContentLoaded", async () => {
+    // Cargar categorías y marcas para los selects
     await loadCategorias();
     await loadMarcas();
+
+    // Cargar tabla de productos
     await loadProductos();
 
     // Event listener para botón nuevo producto
-    document.getElementById('btn-nuevo-producto')?.addEventListener('click', nuevoProducto);
+    const btnNuevo = document.getElementById('btn-nuevo-producto');
+    if (btnNuevo) {
+        btnNuevo.addEventListener('click', nuevoProducto);
+    }
 
     // Event listener para formulario
-    document.getElementById('form-producto')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveProducto();
-    });
+    const form = document.getElementById('form-producto');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveProducto();
+        });
+    }
+
+    // Event listener para cerrar modal
+    const btnCerrarModal = document.getElementById('btn-cerrar-modal-producto');
+    if (btnCerrarModal) {
+        btnCerrarModal.addEventListener('click', () => {
+            closeModal('modal-producto');
+        });
+    }
 });

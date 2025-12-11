@@ -4,9 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - Avila's Tyre Company</title>
+    <title>Ventas y Facturación - Admin</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* Estilos adicionales para el dropdown de estados */
+        .estado-select option {
+            background: #1e293b;
+            color: white;
+            padding: 10px;
+        }
+
+        .estado-select option:hover {
+            background: #334155;
+        }
+
+        /* Mejorar espaciado de botones en acciones */
+        .admin-table td:last-child {
+            min-width: 180px;
+        }
+
+        .admin-table .btn-icon {
+            margin: 2px;
+        }
+    </style>
 </head>
 
 <body>
@@ -21,7 +42,7 @@
                 </div>
 
                 <nav class="sidebar-nav">
-                    <a href="admin.html" class="nav-item active">
+                    <a href="admin.html" class="nav-item">
                         <span class="nav-icon">📊</span>
                         <span class="nav-text">Dashboard</span>
                     </a>
@@ -33,7 +54,7 @@
                         <span class="nav-icon">👥</span>
                         <span class="nav-text">Clientes</span>
                     </a>
-                    <a href="admin-ventas.html" class="nav-item">
+                    <a href="admin-ventas.html" class="nav-item active">
                         <span class="nav-icon">💰</span>
                         <span class="nav-text">Ventas</span>
                     </a>
@@ -52,225 +73,191 @@
             <!-- MAIN CONTENT -->
             <main class="admin-main">
                 <header class="admin-header">
-                    <h1>📊 Dashboard</h1>
-                    <div class="header-date" id="current-date"></div>
+                    <h1>💰 Ventas y Facturación</h1>
+                    <button class="btn-primary" id="btn-nueva-venta">➕ Nueva Venta (POS)</button>
                 </header>
 
-                <!-- STATS CARDS -->
+                <!-- FILTERS -->
+                <div class="admin-section">
+                    <div class="search-bar">
+                        <input type="date" class="search-input" id="filter-fecha-inicio" style="max-width: 200px;"
+                            title="Fecha inicio">
+                        <input type="date" class="search-input" id="filter-fecha-fin" style="max-width: 200px;"
+                            title="Fecha fin">
+                        <select class="search-input" id="filter-estado" style="max-width: 180px;">
+                            <option value="">Todos los estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Confirmado">Confirmado</option>
+                            <option value="En Preparación">En Preparación</option>
+                            <option value="En Camino">En Camino</option>
+                            <option value="Entregado">Entregado</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                        <button class="btn-success" id="btn-reportes">📊 Generar Reporte</button>
+                    </div>
+                </div>
+
+                <!-- SALES TABLE -->
+                <div class="admin-section">
+                    <h2 style="color: white; margin-bottom: 20px;">📋 Lista de Ventas</h2>
+                    <div class="table-container">
+                        <table class="admin-table" id="ventas-table">
+                            <thead>
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Productos</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px;">
+                                        <div class="spinner"></div>
+                                        <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando ventas...
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SALES STATS -->
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📦
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">💵
                         </div>
                         <div class="stat-info">
-                            <h3>Productos</h3>
-                            <p class="stat-value" id="stat-productos">-</p>
-                            <span class="stat-label">Total en inventario</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">👥
-                        </div>
-                        <div class="stat-info">
-                            <h3>Clientes</h3>
-                            <p class="stat-value" id="stat-clientes">-</p>
-                            <span class="stat-label">Registrados</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">💰
-                        </div>
-                        <div class="stat-info">
-                            <h3>Ventas del Mes</h3>
-                            <p class="stat-value" id="stat-ventas-mes">-</p>
+                            <h3>Ventas Hoy</h3>
+                            <p class="stat-value" id="stat-ventas-hoy-total">-</p>
                             <span class="stat-label">Bs</span>
                         </div>
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">📈
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">📅
                         </div>
                         <div class="stat-info">
-                            <h3>Ventas Hoy</h3>
-                            <p class="stat-value" id="stat-ventas-hoy">-</p>
-                            <span class="stat-label">Transacciones</span>
+                            <h3>Ventas del Mes</h3>
+                            <p class="stat-value" id="stat-ventas-mes-total">-</p>
+                            <span class="stat-label">Bs</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- RECENT ACTIVITY -->
-                <div class="admin-section">
-                    <h2>📋 Actividad Reciente</h2>
-                    <div class="activity-list" id="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">⏳</div>
-                            <div class="activity-content">
-                                <p>Cargando actividad reciente...</p>
-                            </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">📈
                         </div>
-                    </div>
-                </div>
-
-                <!-- QUICK ACTIONS -->
-                <div class="admin-section">
-                    <h2>⚡ Acciones Rápidas</h2>
-                    <div class="quick-actions">
-                        <a href="admin-productos.html" class="quick-action-btn">
-                            <span class="action-icon">➕</span>
-                            <span>Agregar Producto</span>
-                        </a>
-                        <a href="admin-clientes.html" class="quick-action-btn">
-                            <span class="action-icon">👤</span>
-                            <span>Clientes</span>
-                        </a>
-                        <a href="admin-ventas.html" class="quick-action-btn">
-                            <span class="action-icon">💳</span>
-                            <span>Nueva Venta</span>
-                        </a>
-                        <a href="#" class="quick-action-btn" id="btn-reportes">
-                            <span class="action-icon">📊</span>
-                            <span>Ver Reportes</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- REPORTS SECTION -->
-                <div class="admin-section">
-                    <h2>📊 Productos con Stock Bajo</h2>
-                    <div class="table-container">
-                        <table class="admin-table" id="stock-bajo-table">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Código</th>
-                                    <th>Stock</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="4" style="text-align: center; padding: 20px;">Cargando...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="stat-info">
+                            <h3>Producto Más Vendido</h3>
+                            <p class="stat-value" id="stat-top-producto" style="font-size: 1rem;">-</p>
+                            <span class="stat-label">Este mes</span>
+                        </div>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- MODAL POS (NUEVA VENTA) -->
+    <div id="modal-pos" class="admin-modal">
+        <div class="admin-modal-content" style="max-width: 1000px;">
+            <div class="admin-modal-header">
+                <h2>🛒 Punto de Venta (POS)</h2>
+                <button class="btn-close" onclick="closeModal('modal-pos')">&times;</button>
+            </div>
+            <div class="admin-modal-body">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <!-- LEFT: Product Selection -->
+                    <div>
+                        <h3 style="color: white; margin-bottom: 15px;">Seleccionar Productos</h3>
+
+                        <div class="campo">
+                            <input type="text" class="search-input" id="pos-search-producto"
+                                placeholder="Buscar producto...">
+                        </div>
+
+                        <div id="pos-productos-list" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                                Escriba para buscar productos
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Cart -->
+                    <div>
+                        <h3 style="color: white; margin-bottom: 15px;">Carrito</h3>
+
+                        <div class="campo">
+                            <label for="pos-cliente">Cliente</label>
+                            <select id="pos-cliente" required>
+                                <option value="">Seleccionar cliente...</option>
+                            </select>
+                        </div>
+
+                        <div id="pos-cart-items" style="margin: 20px 0; max-height: 300px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
+                                Carrito vacío
+                            </div>
+                        </div>
+
+                        <div
+                            style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <div class="campo">
+                                <label for="pos-descuento">Descuento (%)</label>
+                                <input type="number" id="pos-descuento" min="0" max="100" value="0" step="0.1">
+                            </div>
+
+                            <div
+                                style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: rgba(255,255,255,0.7);">Subtotal:</span>
+                                    <strong id="pos-subtotal" style="color: white;">Bs 0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: rgba(255,255,255,0.7);">Descuento:</span>
+                                    <strong id="pos-descuento-monto" style="color: #f59e0b;">Bs 0.00</strong>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 1.2rem; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <span style="color: white; font-weight: 600;">TOTAL:</span>
+                                    <strong id="pos-total" style="color: #10b981;">Bs 0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn-success btn-block btn-large" id="btn-procesar-venta">
+                            ✔ Procesar Venta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE VENTA -->
+    <div id="modal-detalle" class="admin-modal">
+        <div class="admin-modal-content" style="max-width: 900px;">
+            <div class="admin-modal-header">
+                <h2>🧾 Detalle de Venta</h2>
+                <button class="btn-close" onclick="closeModal('modal-detalle')">&times;</button>
+            </div>
+            <div class="admin-modal-body" id="detalle-venta-content">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando detalle...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="js/admin-common.js"></script>
-    <script>
-        // Check authentication
-        checkAdminAuth();
-
-        // Load dashboard data
-        document.addEventListener('DOMContentLoaded', async () => {
-            updateDateTime();
-            setInterval(updateDateTime, 60000); // Update every minute
-
-            await loadDashboardStats();
-            await loadRecentActivity();
-            await loadStockBajo();
-        });
-
-        function updateDateTime() {
-            const now = new Date();
-            const options = {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            };
-            document.getElementById('current-date').textContent = now.toLocaleDateString('es-BO', options);
-        }
-
-        async function loadDashboardStats() {
-            try {
-                // Fetch Total Productos
-                const productosResponse = await apiRequest('/admin/stats/productos-total');
-                document.getElementById('stat-productos').textContent = productosResponse.TotalProductos;
-
-                // Fetch Total Clientes
-                const clientesResponse = await apiRequest('/admin/stats/clientes-total');
-                document.getElementById('stat-clientes').textContent = clientesResponse.TotalClientes;
-
-                // Fetch Ventas del Mes
-                const ventasMesResponse = await apiRequest('/admin/stats/ventas-mes');
-                document.getElementById('stat-ventas-mes').textContent = parseFloat(ventasMesResponse.TotalVentasMes).toFixed(2);
-
-                // Fetch Ventas Hoy (Transacciones)
-                const ventasHoyResponse = await apiRequest('/admin/stats/ventas-hoy');
-                document.getElementById('stat-ventas-hoy').textContent = ventasHoyResponse.TotalTransaccionesHoy;
-
-            } catch (err) {
-                console.error('Error loading stats:', err);
-                document.getElementById('stat-productos').textContent = 'Error';
-                document.getElementById('stat-clientes').textContent = 'Error';
-                document.getElementById('stat-ventas-mes').textContent = 'Error';
-                document.getElementById('stat-ventas-hoy').textContent = 'Error';
-            }
-        }
-
-        async function loadRecentActivity() {
-            try {
-                const response = await apiRequest('/admin/ventas?limit=5');
-                const ventas = await response.json();
-
-                const activityList = document.getElementById('activity-list');
-                if (ventas.length === 0) {
-                    activityList.innerHTML = '<div class="activity-item"><p>No hay actividad reciente</p></div>';
-                    return;
-                }
-
-                activityList.innerHTML = ventas.map(venta => `
-          <div class="activity-item">
-            <div class="activity-icon">💰</div>
-            <div class="activity-content">
-              <p><strong>Venta #${venta.NumeroFactura}</strong></p>
-              <p>Bs ${venta.TotalVentaBs.toFixed(2)} - ${new Date(venta.FechaVenta).toLocaleDateString('es-BO')}</p>
-            </div>
-            <div class="activity-status status-${venta.NombreEstado.toLowerCase()}">
-              ${venta.NombreEstado}
-            </div>
-          </div>
-        `).join('');
-            } catch (err) {
-                console.error('Error loading activity:', err);
-                document.getElementById('activity-list').innerHTML = '<div class="activity-item"><p>Error al cargar actividad</p></div>';
-            }
-        }
-
-        async function loadStockBajo() {
-            try {
-                const response = await apiRequest('/admin/reportes/stock-bajo');
-                const productos = await response.json();
-
-                const tbody = document.querySelector('#stock-bajo-table tbody');
-                if (productos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No hay productos con stock bajo</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = productos.slice(0, 10).map(p => `
-          <tr>
-            <td>${p.NombreProducto}</td>
-            <td>${p.CodigoProducto}</td>
-            <td><span class="badge badge-danger">${p.StockActual}</span></td>
-            <td>
-              <a href="admin-productos.html?id=${p.ProductoID}" class="btn-sm btn-primary">Editar</a>
-            </td>
-          </tr>
-        `).join('');
-            } catch (err) {
-                console.error('Error loading stock bajo:', err);
-                document.querySelector('#stock-bajo-table tbody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Error al cargar datos</td></tr>';
-            }
-        }
-    </script>
+    <script src="js/admin-ventas.js"></script>
 
 </body>
 

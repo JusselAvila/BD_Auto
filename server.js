@@ -218,7 +218,7 @@ app.post('/api/registro/empresa', async (req, res) => {
   }
 });
 
-// Login
+
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -227,45 +227,30 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
+    // Ejecutamos el SP
     const result = await sqlPool.request()
       .input('Email', sql.NVarChar(100), email)
-      .query(`
-        SELECT 
-          u.UsuarioID, 
-          u.Email, 
-          u.PasswordHash, 
-          u.RolID,
-          r.NombreRol,
-          c.ClienteID,
-          c.TipoCliente,
-          CASE 
-            WHEN c.TipoCliente = 'Persona' THEN p.Nombres + ' ' + p.ApellidoPaterno
-            ELSE e.RazonSocial
-          END AS NombreCompleto
-        FROM Usuarios u
-        INNER JOIN Roles r ON u.RolID = r.RolID
-        LEFT JOIN Clientes c ON u.UsuarioID = c.UsuarioID
-        LEFT JOIN Personas p ON c.ClienteID = p.ClienteID AND c.TipoCliente = 'Persona'
-        LEFT JOIN Empresas e ON c.ClienteID = e.ClienteID AND c.TipoCliente = 'Empresa'
-        WHERE u.Email = @Email AND u.Activo = 1
-      `);
+      .execute('sp_LoginUsuario');
 
     if (result.recordset.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const usuario = result.recordset[0];
-    const isValidPassword = await bcrypt.compare(password, usuario.PasswordHash);
 
+    // Validamos contraseña
+    const isValidPassword = await bcrypt.compare(password, usuario.PasswordHash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
+    // Creamos token (base64 simple)
     const token = Buffer.from(JSON.stringify({
       usuarioID: usuario.UsuarioID,
       timestamp: Date.now()
     })).toString('base64');
 
+    // Respondemos con usuario y token
     res.json({
       success: true,
       token,
@@ -284,6 +269,7 @@ app.post('/api/login', async (req, res) => {
     res.status(500).json({ error: 'Error al iniciar sesión' });
   }
 });
+
 
 // =============================================
 // RUTAS DE PERFIL DE USUARIO
@@ -465,28 +451,15 @@ app.get('/api/productos/compatibles/:modeloID/:anio', async (req, res) => {
 app.get('/api/productos/destacados', async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .query(`
-        SELECT TOP 10
-          p.ProductoID,
-          p.CodigoProducto,
-          p.NombreProducto,
-          p.Descripcion,
-          p.PrecioVentaBs,
-          p.StockActual,
-          c.NombreCategoria,
-          m.NombreMarca
-        FROM Productos p
-        INNER JOIN Categorias c ON p.CategoriaID = c.CategoriaID
-        INNER JOIN Marcas m ON p.MarcaID = m.MarcaID
-        WHERE p.Activo = 1 AND p.Destacado = 1 AND p.StockActual > 0
-        ORDER BY p.ProductoID DESC
-      `);
+      .execute('sp_ObtenerProductosDestacados');
+
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo productos destacados:', err);
     res.status(500).json({ error: 'Error al obtener productos' });
   }
 });
+
 
 app.get('/api/productos', async (req, res) => {
   try {
@@ -630,23 +603,7 @@ app.get('/api/direcciones', authenticateToken, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ClienteID', sql.Int, req.user.ClienteID)
-      .query(`
-        SELECT 
-          d.DireccionID,
-          d.NombreDireccion,
-          d.Calle,
-          d.Zona,
-          d.Referencia,
-          d.EsPrincipal,
-          c.NombreCiudad,
-          dep.NombreDepartamento,
-          d.CiudadID
-        FROM Direcciones d
-        INNER JOIN Ciudades c ON d.CiudadID = c.CiudadID
-        INNER JOIN Departamentos dep ON c.DepartamentoID = dep.DepartamentoID
-        WHERE d.ClienteID = @ClienteID AND d.Activo = 1
-        ORDER BY d.EsPrincipal DESC, d.NombreDireccion
-      `);
+      .execute('sp_ObtenerDireccionesCliente');
 
     res.json(result.recordset);
   } catch (err) {
@@ -654,6 +611,7 @@ app.get('/api/direcciones', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener direcciones' });
   }
 });
+
 
 app.post('/api/direcciones', authenticateToken, async (req, res) => {
   try {
@@ -741,23 +699,7 @@ app.get('/api/ventas/historial', authenticateToken, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ClienteID', sql.Int, req.user.ClienteID)
-      .query(`
-        SELECT 
-          v.VentaID,
-          v.NumeroFactura,
-          v.FechaVenta,
-          v.TotalVentaBs,
-          ep.NombreEstado,
-          mp.NombreMetodo AS MetodoPago,
-          COUNT(dv.DetalleVentaID) AS CantidadProductos
-        FROM Ventas v
-        INNER JOIN EstadosPedido ep ON v.EstadoID = ep.EstadoID
-        INNER JOIN MetodosPago mp ON v.MetodoPagoID = mp.MetodoPagoID
-        LEFT JOIN DetalleVentas dv ON v.VentaID = dv.VentaID
-        WHERE v.ClienteID = @ClienteID
-        GROUP BY v.VentaID, v.NumeroFactura, v.FechaVenta, v.TotalVentaBs, ep.NombreEstado, mp.NombreMetodo
-        ORDER BY v.FechaVenta DESC
-      `);
+      .execute('sp_HistorialVentasCliente');
 
     res.json(result.recordset);
   } catch (err) {
@@ -766,50 +708,30 @@ app.get('/api/ventas/historial', authenticateToken, async (req, res) => {
   }
 });
 
+
 app.get('/api/ventas/:ventaID', authenticateToken, async (req, res) => {
   try {
-    const ventaResult = await sqlPool.request()
+    const result = await sqlPool.request()
       .input('VentaID', sql.Int, req.params.ventaID)
       .input('ClienteID', sql.Int, req.user.ClienteID)
-      .query(`
-        SELECT 
-          v.*,
-          ep.NombreEstado,
-          mp.NombreMetodo AS MetodoPago,
-          d.Calle + ', ' + d.Zona + ', ' + c.NombreCiudad AS DireccionCompleta
-        FROM Ventas v
-        INNER JOIN EstadosPedido ep ON v.EstadoID = ep.EstadoID
-        INNER JOIN MetodosPago mp ON v.MetodoPagoID = mp.MetodoPagoID
-        INNER JOIN Direcciones d ON v.DireccionEnvioID = d.DireccionID
-        INNER JOIN Ciudades c ON d.CiudadID = c.CiudadID
-        WHERE v.VentaID = @VentaID AND v.ClienteID = @ClienteID
-      `);
+      .execute('sp_DetalleVenta');
 
-    if (ventaResult.recordset.length === 0) {
+    if (result.recordsets[0].length === 0) {
       return res.status(404).json({ error: 'Venta no encontrada' });
     }
 
-    const detalleResult = await sqlPool.request()
-      .input('VentaID', sql.Int, req.params.ventaID)
-      .query(`
-        SELECT 
-          dv.*,
-          p.NombreProducto,
-          p.CodigoProducto
-        FROM DetalleVentas dv
-        INNER JOIN Productos p ON dv.ProductoID = p.ProductoID
-        WHERE dv.VentaID = @VentaID
-      `);
-
     res.json({
-      venta: ventaResult.recordset[0],
-      detalles: detalleResult.recordset
+      venta: result.recordsets[0][0],
+      detalles: result.recordsets[1]
     });
   } catch (err) {
     console.error('Error obteniendo detalle de venta:', err);
     res.status(500).json({ error: 'Error al obtener detalle' });
   }
 });
+
+
+
 
 app.get('/api/metodos-pago', async (req, res) => {
   try {
@@ -1000,15 +922,12 @@ app.get('/api/admin/stats/ventas-hoy', authenticateToken, requireAdmin, async (r
 app.get('/api/admin/stats/ventas-mes', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
-      .query(`
-        SELECT 
-          COUNT(*) AS CantidadVentasMes,
-          COALESCE(SUM(TotalVentaBs), 0) AS TotalVentasMes
-        FROM Ventas
-        WHERE YEAR(FechaVenta) = YEAR(GETDATE())
-          AND MONTH(FechaVenta) = MONTH(GETDATE())
-      `);
+      .input('Mes', sql.Int, 12)   // opcional, por ejemplo diciembre
+      .input('Anio', sql.Int, 2025) // opcional
+      .execute('sp_ObtenerVentasMes');
+
     res.json(result.recordset[0]);
+
   } catch (err) {
     console.error('Error obteniendo ventas del mes:', err);
     res.status(500).json({ error: 'Error al obtener estadísticas de ventas' });
@@ -1040,25 +959,13 @@ app.get('/api/admin/stats/clientes-total', authenticateToken, requireAdmin, asyn
 // =============================================
 // ADMINISTRACIÓN - REPORTES
 // =============================================
-
 app.get('/api/admin/reportes/productos-mas-vendidos', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .query(`
-        SELECT TOP 20
-          p.ProductoID,
-          p.NombreProducto,
-          p.CodigoProducto,
-          m.NombreMarca,
-          SUM(dv.Cantidad) AS CantidadVendida,
-          SUM(dv.SubtotalBs) AS TotalVendido
-        FROM DetalleVentas dv
-        INNER JOIN Productos p ON dv.ProductoID = p.ProductoID
-        INNER JOIN Ventas v ON dv.VentaID = v.VentaID
-        LEFT JOIN Marcas m ON p.MarcaID = m.MarcaID
-        WHERE YEAR(v.FechaVenta) = YEAR(GETDATE())
-          AND MONTH(v.FechaVenta) = MONTH(GETDATE())
-        GROUP BY p.ProductoID, p.NombreProducto, p.CodigoProducto, m.NombreMarca
+        SELECT TOP 20 *
+        FROM vw_ProductosMasVendidos
+        WHERE AñoVenta = YEAR(GETDATE()) AND MesVenta = MONTH(GETDATE())
         ORDER BY CantidadVendida DESC
       `);
     res.json(result.recordset);
@@ -1068,16 +975,13 @@ app.get('/api/admin/reportes/productos-mas-vendidos', authenticateToken, require
   }
 });
 
+
 app.get('/api/admin/reportes/ventas-diarias', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .query(`
-        SELECT TOP 30
-          CAST(FechaVenta AS DATE) AS Fecha,
-          COUNT(*) AS CantidadVentas,
-          SUM(TotalVentaBs) AS TotalVentasBs
-        FROM Ventas
-        GROUP BY CAST(FechaVenta AS DATE)
+        SELECT TOP 30 *
+        FROM vw_VentasDiarias
         ORDER BY Fecha DESC
       `);
     res.json(result.recordset);
@@ -1087,18 +991,13 @@ app.get('/api/admin/reportes/ventas-diarias', authenticateToken, requireAdmin, a
   }
 });
 
+
 app.get('/api/admin/reportes/stock-bajo', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .query(`
-        SELECT 
-          ProductoID,
-          CodigoProducto,
-          NombreProducto,
-          StockActual,
-          StockMinimo
-        FROM Productos
-        WHERE StockActual <= StockMinimo AND Activo = 1
+        SELECT * 
+        FROM vw_StockBajo
         ORDER BY StockActual ASC
       `);
     res.json(result.recordset);
@@ -1108,18 +1007,13 @@ app.get('/api/admin/reportes/stock-bajo', authenticateToken, requireAdmin, async
   }
 });
 
+
 app.get('/api/admin/reportes/ventas-ciudad', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await sqlPool.request()
       .query(`
-        SELECT 
-          c.NombreCiudad,
-          COUNT(v.VentaID) AS CantidadVentas,
-          SUM(v.TotalVentaBs) AS TotalVentasBs
-        FROM Ventas v
-        INNER JOIN Direcciones d ON v.DireccionEnvioID = d.DireccionID
-        INNER JOIN Ciudades c ON d.CiudadID = c.CiudadID
-        GROUP BY c.NombreCiudad
+        SELECT * 
+        FROM vw_VentasPorCiudad
         ORDER BY TotalVentasBs DESC
       `);
     res.json(result.recordset);
@@ -1129,6 +1023,7 @@ app.get('/api/admin/reportes/ventas-ciudad', authenticateToken, requireAdmin, as
   }
 });
 
+
 // =============================================
 // ADMINISTRACIÓN - PRODUCTOS
 // =============================================
@@ -1137,32 +1032,12 @@ app.get('/api/admin/productos', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .query(`
-        SELECT 
-          p.ProductoID,
-          p.CodigoProducto,
-          p.NombreProducto,
-          p.Descripcion,
-          p.CategoriaID,
-          c.NombreCategoria,
-          p.MarcaID,
-          m.NombreMarca,
-          p.PrecioCompraBs,
-          p.PrecioVentaBs,
-          p.StockActual,
-          p.StockMinimo,
-          p.Ancho,
-          p.Perfil,
-          p.DiametroRin,
-          p.IndiceCarga,
-          p.IndiceVelocidad,
-          p.Destacado,
-          p.Activo
-        FROM Productos p
-        LEFT JOIN Categorias c ON p.CategoriaID = c.CategoriaID
-        LEFT JOIN Marcas m ON p.MarcaID = m.MarcaID
-        WHERE p.Activo = 1
-        ORDER BY p.ProductoID DESC
+        SELECT *
+        FROM vw_ProductosAdmin
+        WHERE Activo = 1
+        ORDER BY ProductoID DESC
       `);
+
     res.json(result.recordset);
   } catch (err) {
     console.error('Error obteniendo productos:', err);
@@ -1170,30 +1045,16 @@ app.get('/api/admin/productos', async (req, res) => {
   }
 });
 
+
 app.get('/api/admin/productos/:id', async (req, res) => {
   try {
     const result = await sqlPool.request()
       .input('ProductoID', sql.Int, req.params.id)
       .query(`
-        SELECT 
-          p.ProductoID,
-          p.CodigoProducto,
-          p.NombreProducto,
-          p.Descripcion,
-          p.CategoriaID,
-          p.MarcaID,
-          p.PrecioCompraBs,
-          p.PrecioVentaBs,
-          p.StockActual,
-          p.StockMinimo,
-          p.Ancho,
-          p.Perfil,
-          p.DiametroRin,
-          p.IndiceCarga,
-          p.IndiceVelocidad,
-          p.Destacado
-        FROM Productos p
-        WHERE p.ProductoID = @ProductoID AND p.Activo = 1
+        SELECT *
+        FROM vw_ProductosAdmin
+        WHERE ProductoID = @ProductoID
+          AND Activo = 1
       `);
 
     if (result.recordset.length === 0) {
@@ -1201,11 +1062,13 @@ app.get('/api/admin/productos/:id', async (req, res) => {
     }
 
     res.json(result.recordset[0]);
+
   } catch (err) {
     console.error('Error obteniendo producto:', err);
     res.status(500).json({ error: 'Error al obtener producto' });
   }
 });
+
 
 app.post('/api/admin/productos', async (req, res) => {
   try {
