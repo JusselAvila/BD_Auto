@@ -7,6 +7,101 @@
     <title>Ventas y Facturación - Admin</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* Estilos adicionales para el modal de cambio de estado */
+        .estado-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            color: white;
+            text-align: center;
+        }
+
+        .estado-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .estado-badge.selected {
+            border-color: white;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .estado-badge.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .estado-badge.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .estado-pendiente {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .estado-confirmado {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .estado-preparacion {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+
+        .estado-camino {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+
+        .estado-entregado {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .estado-cancelado {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .estados-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .venta-info-modal {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .venta-info-modal p {
+            margin: 8px 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+        }
+
+        .venta-info-modal strong {
+            color: white;
+            font-weight: 600;
+        }
+
+        #estados-opciones {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+        }
+    </style>
 </head>
 
 <body>
@@ -59,12 +154,17 @@
                 <!-- FILTERS -->
                 <div class="admin-section">
                     <div class="search-bar">
-                        <input type="date" class="search-input" id="filter-fecha-inicio" style="max-width: 200px;">
-                        <input type="date" class="search-input" id="filter-fecha-fin" style="max-width: 200px;">
+                        <input type="date" class="search-input" id="filter-fecha-inicio" style="max-width: 200px;"
+                            title="Fecha inicio">
+                        <input type="date" class="search-input" id="filter-fecha-fin" style="max-width: 200px;"
+                            title="Fecha fin">
                         <select class="search-input" id="filter-estado" style="max-width: 180px;">
                             <option value="">Todos los estados</option>
                             <option value="Pendiente">Pendiente</option>
-                            <option value="Completado">Completado</option>
+                            <option value="Confirmado">Confirmado</option>
+                            <option value="En Preparación">En Preparación</option>
+                            <option value="En Camino">En Camino</option>
+                            <option value="Entregado">Entregado</option>
                             <option value="Cancelado">Cancelado</option>
                         </select>
                         <button class="btn-success" id="btn-reportes">📊 Generar Reporte</button>
@@ -73,6 +173,7 @@
 
                 <!-- SALES TABLE -->
                 <div class="admin-section">
+                    <h2 style="color: white; margin-bottom: 20px;">📋 Lista de Ventas</h2>
                     <div class="table-container">
                         <table class="admin-table" id="ventas-table">
                             <thead>
@@ -123,7 +224,7 @@
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">🔝
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">📈
                         </div>
                         <div class="stat-info">
                             <h3>Producto Más Vendido</h3>
@@ -136,95 +237,64 @@
         </div>
     </div>
 
-    <!-- MODAL POS (NUEVA VENTA) -->
-    <div id="modal-pos" class="admin-modal">
-        <div class="admin-modal-content" style="max-width: 1000px;">
-            <div class="admin-modal-header">
-                <h2>🛒 Punto de Venta (POS)</h2>
-                <button class="btn-close" onclick="closeModal('modal-pos')">&times;</button>
+    <!-- MODAL CAMBIAR ESTADO -->
+    <div id="modal-cambiar-estado" class="modal">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h2>🔄 Cambiar Estado de Venta</h2>
+                <button class="btn-close" onclick="closeModal('modal-cambiar-estado')">&times;</button>
             </div>
-            <div class="admin-modal-body">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                    <!-- LEFT: Product Selection -->
-                    <div>
-                        <h3 style="color: white; margin-bottom: 15px;">Seleccionar Productos</h3>
+            <div class="modal-body">
+                <!-- Info de la venta -->
+                <div class="venta-info-modal" id="venta-info-modal">
+                    <p><strong>Factura:</strong> <span id="modal-factura">-</span></p>
+                    <p><strong>Cliente:</strong> <span id="modal-cliente">-</span></p>
+                    <p><strong>Estado Actual:</strong> <span id="modal-estado-actual" class="badge">-</span></p>
+                </div>
 
-                        <div class="campo">
-                            <input type="text" class="search-input" id="pos-search-producto"
-                                placeholder="Buscar producto...">
-                        </div>
+                <h3 style="color: white; margin-bottom: 15px; font-size: 1.1rem;">Seleccionar Nuevo Estado:</h3>
 
-                        <div id="pos-productos-list" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
-                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
-                                Escriba para buscar productos
-                            </div>
-                        </div>
+                <div id="estados-opciones">
+                    <div class="estados-grid">
+                        <!-- Los estados se cargarán dinámicamente aquí -->
                     </div>
+                </div>
 
-                    <!-- RIGHT: Cart -->
-                    <div>
-                        <h3 style="color: white; margin-bottom: 15px;">Carrito</h3>
+                <div class="campo" style="margin-top: 25px;">
+                    <label for="observaciones-estado">Observaciones (opcional):</label>
+                    <textarea id="observaciones-estado" rows="3" placeholder="Agrega notas sobre el cambio de estado..."
+                        style="resize: vertical;"></textarea>
+                </div>
 
-                        <div class="campo">
-                            <label for="pos-cliente">Cliente</label>
-                            <select id="pos-cliente" required>
-                                <option value="">Seleccionar cliente...</option>
-                            </select>
-                        </div>
-
-                        <div id="pos-cart-items" style="margin: 20px 0; max-height: 300px; overflow-y: auto;">
-                            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
-                                Carrito vacío
-                            </div>
-                        </div>
-
-                        <div
-                            style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <div class="campo">
-                                <label for="pos-descuento">Descuento (%)</label>
-                                <input type="number" id="pos-descuento" min="0" max="100" value="0" step="0.1">
-                            </div>
-
-                            <div
-                                style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                    <span style="color: rgba(255,255,255,0.7);">Subtotal:</span>
-                                    <strong id="pos-subtotal" style="color: white;">Bs 0.00</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                    <span style="color: rgba(255,255,255,0.7);">Descuento:</span>
-                                    <strong id="pos-descuento-monto" style="color: #f59e0b;">Bs 0.00</strong>
-                                </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; font-size: 1.2rem; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                    <span style="color: white; font-weight: 600;">TOTAL:</span>
-                                    <strong id="pos-total" style="color: #10b981;">Bs 0.00</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button class="btn-success btn-block btn-large" id="btn-procesar-venta">
-                            ✓ Procesar Venta
-                        </button>
-                    </div>
+                <div style="display: flex; gap: 12px; margin-top: 25px;">
+                    <button class="btn-success btn-block" id="btn-confirmar-cambio-estado">
+                        ✔️ Confirmar Cambio
+                    </button>
+                    <button class="btn-danger" onclick="closeModal('modal-cambiar-estado')" style="padding: 12px 24px;">
+                        ✖️ Cancelar
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- MODAL DETALLE VENTA -->
-    <div id="modal-detalle" class="admin-modal">
-        <div class="admin-modal-content">
-            <div class="admin-modal-header">
+    <div id="modal-detalle" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
                 <h2>🧾 Detalle de Venta</h2>
                 <button class="btn-close" onclick="closeModal('modal-detalle')">&times;</button>
             </div>
-            <div class="admin-modal-body" id="detalle-venta-content">
-                <div style="text-align: center; padding: 40px;">Cargando...</div>
+            <div class="modal-body" id="detalle-venta-content">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="color: rgba(255,255,255,0.6); margin-top: 10px;">Cargando detalle...</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="js/admin-common.js"></script>
     <script src="js/admin-ventas.js"></script>
 
